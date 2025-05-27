@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Text, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Text, Boolean, DateTime, Date
 from app.db.base_class import Base
 from datetime import datetime, timezone
 
@@ -20,8 +20,9 @@ class Account(Base):
     phone_number = Column(String(20), unique=True)
     phone_verified = Column(Boolean, default=False)
     fullname = Column(String(255))
-    avatar = Column(Text)
-    bio = Column(Text)
+    date_of_birth = Column(Date, nullable=True)  # Add this line
+    avatar = Column(Text, nullable=True, server_default="")
+    bio = Column(Text, nullable=True, server_default="")
     status = Column(Enum(AccountStatusEnum), default=AccountStatusEnum.active)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))

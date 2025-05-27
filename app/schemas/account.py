@@ -1,6 +1,8 @@
 from pydantic import BaseModel, EmailStr
 from enum import Enum
 from uuid import UUID
+from typing import Optional
+from datetime import date
 
 class AccountStatusEnum(str, Enum):
     active = "active"
@@ -14,9 +16,17 @@ class AccountBase(BaseModel):
     avatar: str = None
     bio: str = None
 
-class AccountCreate(AccountBase):
+class AccountCreate(BaseModel):
+    username: str
+    email: EmailStr
     password: str
-    role_id: int
+    full_name: str
+    date_of_birth: Optional[date] = None
+
+class AccountUpdate(BaseModel):
+    phone: Optional[str] = None
+    full_name: Optional[str] = None
+    date_of_birth: Optional[date] = None
 
 class AccountOut(AccountBase):
     account_id: UUID
