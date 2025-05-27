@@ -1,8 +1,18 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 from enum import Enum
 from uuid import UUID
 from typing import Optional
 from datetime import date
+from fastapi import HTTPException
+
+from app.core.validators import (
+    validate_username,
+    validate_password,
+    validate_email_address,
+    validate_phone_number,
+    validate_full_name,
+    validate_date_of_birth,
+)
 
 class AccountStatusEnum(str, Enum):
     active = "active"
@@ -10,27 +20,116 @@ class AccountStatusEnum(str, Enum):
     inactive = "inactive"
 
 class AccountBase(BaseModel):
-    username: str
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    username: str = Field(..., min_length=3, max_length=100, example="john_doe")
     email: EmailStr
-    fullname: str = None
-    avatar: str = None
-    bio: str = None
+    full_name: Optional[str] = None
+    avatar: Optional[str] = None
+    bio: Optional[str] = None
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        try:
+            return validate_username(v)
+        except Exception as e:
+            raise ValueError(str(e))
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        try:
+            return validate_email_address(v)
+        except Exception as e:
+            raise ValueError(str(e))
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, v: Optional[str]) -> Optional[str]:
+        try:
+            return validate_full_name(v) if v else v
+        except Exception as e:
+            raise ValueError(str(e))
 
 class AccountCreate(BaseModel):
-    username: str
-    email: EmailStr
-    password: str
-    full_name: str
+    username: str = Field(..., min_length=3, max_length=100, example="khoipd8")
+    email: EmailStr = Field(..., example="KhoiPD8@gmail.com")
+    password: str = Field(..., min_length=8, example="SecurePassword@123")
+    full_name: str = Field(..., min_length=3, max_length=100, example="Phạm Đăng Khôi")
     date_of_birth: Optional[date] = None
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        try:
+            return validate_username(v)
+        except Exception as e:
+            raise ValueError(str(e))
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        try:
+            return validate_password(v)
+        except Exception as e:
+            raise ValueError(str(e))
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        try:
+            return validate_email_address(v)
+        except Exception as e:
+            raise ValueError(str(e))
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, v: str) -> str:
+        try:
+            return validate_full_name(v)
+        except Exception as e:
+            raise ValueError(str(e))
+
+    @field_validator("date_of_birth")
+    @classmethod
+    def validate_birth_date(cls, v: Optional[date]) -> Optional[date]:
+        try:
+            return validate_date_of_birth(v) if v else v
+        except Exception as e:
+            raise ValueError(str(e))
 
 class AccountUpdate(BaseModel):
     phone: Optional[str] = None
     full_name: Optional[str] = None
     date_of_birth: Optional[date] = None
 
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        try:
+            return validate_phone_number(v) if v else v
+        except Exception as e:
+            raise ValueError(str(e))
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, v: Optional[str]) -> Optional[str]:
+        try:
+            return validate_full_name(v) if v else v
+        except Exception as e:
+            raise ValueError(str(e))
+
+    @field_validator("date_of_birth")
+    @classmethod
+    def validate_birth_date(cls, v: Optional[date]) -> Optional[date]:
+        try:
+            return validate_date_of_birth(v) if v else v
+        except Exception as e:
+            raise ValueError(str(e))
+
 class AccountOut(AccountBase):
     account_id: UUID
     status: AccountStatusEnum
 
-    class Config:
-        form_attributes = True
+    model_config = ConfigDict(from_attributes=True)

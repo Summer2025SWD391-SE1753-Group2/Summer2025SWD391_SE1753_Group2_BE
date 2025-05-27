@@ -19,7 +19,7 @@ class Account(Base):
     password_hash = Column(String(255), nullable=False)
     phone_number = Column(String(20), unique=True)
     phone_verified = Column(Boolean, default=False)
-    fullname = Column(String(255))
+    full_name = Column(String(255))
     date_of_birth = Column(Date, nullable=True)  # Add this line
     avatar = Column(Text, nullable=True, server_default="")
     bio = Column(Text, nullable=True, server_default="")
