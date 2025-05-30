@@ -23,7 +23,6 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int
     DATABASE_URL: str
 
-    # Superuser account settings
     FIRST_SUPERUSER_GMAIL: EmailStr
     FIRST_SUPERUSER_USERNAME: str
     FIRST_SUPERUSER_PASSWORD: str
