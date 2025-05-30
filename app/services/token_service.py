@@ -29,4 +29,4 @@ class TokenService:
             payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
             return payload
         except jwt.JWTError:
-            return None 
+            return None
