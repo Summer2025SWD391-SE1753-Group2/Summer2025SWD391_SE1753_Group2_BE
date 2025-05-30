@@ -58,6 +58,9 @@ class AccountCreate(BaseModel):
     password: str = Field(..., min_length=8, example="SecurePassword@123")
     full_name: str = Field(..., min_length=3, max_length=100, example="Phạm Đăng Khôi")
     date_of_birth: Optional[date] = None
+    phone_number: str = Field(..., min_length=10, max_length=15, example="0987654321")
+    avatar: Optional[str] = None
+    bio: Optional[str] = None
 
     @field_validator("username")
     @classmethod
@@ -96,6 +99,14 @@ class AccountCreate(BaseModel):
     def validate_birth_date(cls, v: Optional[date]) -> Optional[date]:
         try:
             return validate_date_of_birth(v) if v else v
+        except Exception as e:
+            raise ValueError(str(e)) 
+        
+    @field_validator("phone_number")
+    @classmethod
+    def validate_phone_number(cls, v: str) -> str:
+        try:
+            return validate_phone_number(v)
         except Exception as e:
             raise ValueError(str(e))
 

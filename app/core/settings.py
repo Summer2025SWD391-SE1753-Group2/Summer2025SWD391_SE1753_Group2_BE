@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 11520
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 43200
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     # CORS
     FRONTEND_HOST: List[AnyHttpUrl] = []
