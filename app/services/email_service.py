@@ -59,4 +59,39 @@ async def send_confirmation_email(email: str, username: str):
     
     # Send email
     fm = FastMail(conf)
+    await fm.send_message(message)
+
+async def send_reset_password_email(email: str, username: str):
+    # Create reset password token
+    token_data = {
+        "sub": username,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
+    }
+    token = jwt.encode(token_data, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    
+    # Create reset password link
+    base_url = settings.BACKEND_CORS_ORIGINS[0] if isinstance(settings.BACKEND_CORS_ORIGINS, list) else settings.BACKEND_CORS_ORIGINS
+    base_url = base_url.rstrip('/')
+    api_path = settings.API_V1_STR.lstrip('/')
+    reset_link = f"{base_url}/{api_path}/auth/reset-password?token={token}"
+    
+    # Load and render template
+    template = env.get_template('reset_password.html')
+    html_content = template.render(
+        project_name=settings.PROJECT_NAME,
+        username=username,
+        reset_link=reset_link,
+        expire_hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS
+    )
+    
+    # Create email message
+    message = MessageSchema(
+        subject=f"{settings.PROJECT_NAME} - Reset Your Password",
+        recipients=[email],
+        body=html_content,
+        subtype="html"
+    )
+    
+    # Send email
+    fm = FastMail(conf)
     await fm.send_message(message) 

@@ -1,8 +1,8 @@
 from datetime import timedelta, datetime, timezone
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, Request, Security
+from fastapi import APIRouter, Depends, HTTPException, Request, Security, Body
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer, SecurityScopes
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from starlette import status
 from passlib.context import CryptContext
@@ -12,6 +12,8 @@ from app.schemas.token import Token, TokenData
 from app.services.token_service import TokenService
 from app.core.deps import get_db
 from app.db.models.account import Account, AccountStatusEnum
+from app.services.email_service import send_reset_password_email
+from app.services.otp_service import send_otp, verify_otp
 
 router = APIRouter()
 
@@ -180,3 +182,152 @@ async def read_users_me(
     current_user: TokenData = Security(get_current_user, scopes=["me"])
 ):
     return current_user
+
+class ForgotPasswordRequest(BaseModel):
+    username: str
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+    method: str
+    username: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+    confirm_password: str
+
+class ResetPasswordResponse(BaseModel):
+    message: str
+    username: str
+
+class ResetPasswordOTPRequest(BaseModel):
+    username: str
+    otp: str
+    new_password: str
+    confirm_password: str
+
+class ResetPasswordOTPResponse(BaseModel):
+    message: str
+    username: str
+
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    # Find account
+    account = db.query(Account).filter(Account.username == request.username).first()
+    if not account:
+        raise HTTPException(
+            status_code=404,
+            detail="Account not found"
+        )
+    
+    if account.status != AccountStatusEnum.active:
+        raise HTTPException(
+            status_code=400,
+            detail="Account is not active"
+        )
+
+    # If account has phone number, send OTP
+    if account.phone_number and account.phone_verified:
+        otp = await send_otp(account.phone_number)
+        return {
+            "message": "OTP sent to your phone number",
+            "method": "phone",
+            "username": account.username
+        }
+    
+    # Otherwise, send reset password email
+    await send_reset_password_email(account.email, account.username)
+    return {
+        "message": "Reset password instructions sent to your email",
+        "method": "email",
+        "username": account.username
+    }
+
+@router.post("/reset-password", response_model=ResetPasswordResponse)
+async def reset_password(
+    request: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    # Check if passwords match
+    if request.new_password != request.confirm_password:
+        raise HTTPException(
+            status_code=400,
+            detail="Passwords do not match"
+        )
+
+    try:
+        # Verify token
+        payload = jwt.decode(request.token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid token"
+            )
+        
+        # Get account
+        account = db.query(Account).filter(Account.username == username).first()
+        if account is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Account not found"
+            )
+        
+        # Update password
+        account.password_hash = get_password_hash(request.new_password)
+        db.commit()
+        
+        return {
+            "message": "Password reset successfully",
+            "username": account.username
+        }
+    except JWTError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired token"
+        )
+
+@router.post("/reset-password-otp", response_model=ResetPasswordOTPResponse)
+async def reset_password_otp(
+    request: ResetPasswordOTPRequest,
+    db: Session = Depends(get_db)
+):
+    # Check if passwords match
+    if request.new_password != request.confirm_password:
+        raise HTTPException(
+            status_code=400,
+            detail="Passwords do not match"
+        )
+
+    # Find account
+    account = db.query(Account).filter(Account.username == request.username).first()
+    if not account:
+        raise HTTPException(
+            status_code=404,
+            detail="Account not found"
+        )
+    
+    if not account.phone_number or not account.phone_verified:
+        raise HTTPException(
+            status_code=400,
+            detail="Phone number not verified"
+        )
+    
+    # Verify OTP
+    if not await verify_otp(account.phone_number, request.otp):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid OTP"
+        )
+    
+    # Update password
+    account.password_hash = get_password_hash(request.new_password)
+    db.commit()
+    
+    return {
+        "message": "Password reset successfully",
+        "username": account.username
+    }
