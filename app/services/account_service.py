@@ -1,11 +1,13 @@
 from sqlalchemy.orm import Session
-from app.db.models.account import Account
+from app.db.models.account import Account, AccountStatusEnum
 from app.schemas.account import AccountCreate
 from app.core.security import get_password_hash
-from app.db.models.account import AccountStatusEnum
 from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
+from app.services.email_service import send_confirmation_email
+from jose import jwt, JWTError
+from app.core.settings import settings
 
 def check_unique_fields(db: Session, username: str = None, email: str = None):
     if username:
@@ -30,7 +32,7 @@ def check_unique_fields(db: Session, username: str = None, email: str = None):
                 detail="Email already exists"
             )
 
-def create_account(db: Session, account: AccountCreate) -> Account:
+async def create_account(db: Session, account: AccountCreate) -> Account:
     try:
         # Check unique constraints before creating
         check_unique_fields(db, username=account.username, email=account.email)
@@ -40,11 +42,11 @@ def create_account(db: Session, account: AccountCreate) -> Account:
         db_account = Account(
             username=account.username,
             email=account.email,
-            password_hash=hashed_password,  # Changed to match the model's field name
+            password_hash=hashed_password,
             full_name=account.full_name,
             date_of_birth=account.date_of_birth,
-            role_id=1,
-            status=AccountStatusEnum.active,
+            role_id=1,  # Default role: user_l1
+            status=AccountStatusEnum.inactive,  # Default status: inactive
             avatar=None,
             bio=None,
         )
@@ -52,6 +54,10 @@ def create_account(db: Session, account: AccountCreate) -> Account:
         db.add(db_account)
         db.commit()
         db.refresh(db_account)
+
+        # Send confirmation email
+        await send_confirmation_email(db_account.email, db_account.username)
+        
         return db_account
 
     except IntegrityError as e:
@@ -67,3 +73,34 @@ def create_account(db: Session, account: AccountCreate) -> Account:
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+
+async def confirm_email(db: Session, token: str) -> Account:
+    try:
+        # Verify token
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid token"
+            )
+        
+        # Get account
+        account = db.query(Account).filter(Account.username == username).first()
+        if account is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Account not found"
+            )
+        
+        # Update status
+        account.status = AccountStatusEnum.active
+        db.commit()
+        db.refresh(account)
+        
+        return account
+    except JWTError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired token"
+        )
