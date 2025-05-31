@@ -14,6 +14,8 @@ from app.core.deps import get_db
 from app.db.models.account import Account, AccountStatusEnum
 from app.services.email_service import send_reset_password_email
 from app.services.otp_service import send_otp, verify_otp
+from app.schemas.account import AccountCreate, AccountOut
+from app.services.account_service import create_account
 
 router = APIRouter()
 
@@ -34,7 +36,7 @@ oauth2_scheme = OAuth2PasswordBearer(
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt_context.verify(plain_password, hashed_password)
 
-def authenticate_user(db: Session, username: str, password: str):
+def authenticate_account(db: Session, username: str, password: str):
     user = db.query(Account).filter(Account.username == username).first()
     if not user:
         return None, "Incorrect username or password"
@@ -43,6 +45,16 @@ def authenticate_user(db: Session, username: str, password: str):
     if user.status != AccountStatusEnum.active:
         return None, "Account is not active. Please confirm your email first."
     return user, None
+
+def create_access_token(username: str) -> str:
+    expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + expires_delta
+    to_encode = {
+        "sub": username,
+        "exp": expire
+    }
+    encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    return encoded_jwt
 
 async def get_current_user(
     security_scopes: SecurityScopes,
@@ -102,7 +114,7 @@ async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Session = Depends(get_db)
 ):
-    user, error_message = authenticate_user(db, form_data.username, form_data.password)
+    user, error_message = authenticate_account(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -457,3 +469,30 @@ async def verify_email(
             status_code=400,
             detail="Invalid or expired token"
         )
+
+@router.post("/register", response_model=AccountOut)
+async def register(account: AccountCreate, db: Session = Depends(get_db)):
+    """
+    Register a new account
+    """
+    return await create_account(db, account)
+
+@router.post("/access-token")
+async def login(
+    db: Session = Depends(get_db),
+    form_data: OAuth2PasswordRequestForm = Depends()
+):
+    """
+    OAuth2 compatible token login, get an access token for future requests
+    """
+    account, error_message = authenticate_account(db, form_data.username, form_data.password)
+    if not account:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=error_message,
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return {
+        "access_token": create_access_token(account.username),
+        "token_type": "bearer"
+    }
