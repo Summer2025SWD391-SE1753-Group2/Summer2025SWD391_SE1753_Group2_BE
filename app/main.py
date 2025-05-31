@@ -1,8 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.settings import settings
 from app.db.database import engine, SessionLocal
 from app.db.base_class import Base
+from fastapi.openapi.utils import get_openapi
 
 # Import models để load vào metadata
 from app.db.models import account, role  # sửa models -> model
@@ -33,3 +34,23 @@ from app.apis.v1 import base as api_v1
 
 app = FastAPI(title=settings.PROJECT_NAME)
 app.include_router(api_v1.api_router, prefix=settings.API_V1_STR)
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title=settings.PROJECT_NAME,
+        version=settings.VERSION,
+        routes=app.routes,
+    )
+    # Find the OAuth2PasswordBearer security scheme and update tokenUrl
+    security_schemes = openapi_schema.get("components", {}).get("securitySchemes", {})
+    if "OAuth2PasswordBearer" in security_schemes:
+        password_flow = security_schemes["OAuth2PasswordBearer"].get("flows", {}).get("password")
+        if password_flow:
+            password_flow["tokenUrl"] = f"{settings.API_V1_STR}/auth/access-token"
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
