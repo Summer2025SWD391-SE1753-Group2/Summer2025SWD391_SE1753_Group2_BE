@@ -19,6 +19,19 @@ class AccountStatusEnum(str, Enum):
     banned = "banned"
     inactive = "inactive"
 
+class RoleNameEnum(str, Enum):
+    user_l1 = "user_l1"
+    user_l2 = "user_l2"
+    moderator = "moderator"
+    admin = "admin"
+
+class RoleOut(BaseModel):
+    role_id: int
+    role_name: RoleNameEnum
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)
+
 class AccountBase(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
@@ -111,9 +124,18 @@ class AccountCreate(BaseModel):
             raise ValueError(str(e))
 
 class AccountUpdate(BaseModel):
+    email: Optional[EmailStr] = None
     phone: Optional[str] = None
     full_name: Optional[str] = None
     date_of_birth: Optional[date] = None
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: Optional[str]) -> Optional[str]:
+        try:
+            return validate_email_address(v) if v else v
+        except Exception as e:
+            raise ValueError(str(e))
 
     @field_validator("phone")
     @classmethod
@@ -142,5 +164,10 @@ class AccountUpdate(BaseModel):
 class AccountOut(AccountBase):
     account_id: UUID
     status: AccountStatusEnum
+    role: RoleOut
+    email_verified: bool
+    phone_verified: bool
+    phone_number: Optional[str] = None
+    date_of_birth: Optional[date] = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -37,12 +37,12 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def authenticate_user(db: Session, username: str, password: str):
     user = db.query(Account).filter(Account.username == username).first()
     if not user:
-        return False
+        return None, "Incorrect username or password"
     if not verify_password(password, user.password_hash):
-        return False
+        return None, "Incorrect username or password"
     if user.status != AccountStatusEnum.active:
-        return False
-    return user
+        return None, "Account is not active. Please confirm your email first."
+    return user, None
 
 async def get_current_user(
     security_scopes: SecurityScopes,
@@ -102,11 +102,11 @@ async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Session = Depends(get_db)
 ):
-    user = authenticate_user(db, form_data.username, form_data.password)
+    user, error_message = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail=error_message,
             headers={"WWW-Authenticate": "Bearer"},
         )
     
@@ -331,3 +331,129 @@ async def reset_password_otp(
         "message": "Password reset successfully",
         "username": account.username
     }
+
+class VerifyPhoneRequest(BaseModel):
+    username: str
+    otp: str
+
+class VerifyPhoneResponse(BaseModel):
+    message: str
+    username: str
+    role: str
+
+@router.post("/verify-phone", response_model=VerifyPhoneResponse)
+async def verify_phone(
+    request: VerifyPhoneRequest,
+    db: Session = Depends(get_db)
+):
+    # Find account
+    account = db.query(Account).filter(Account.username == request.username).first()
+    if not account:
+        raise HTTPException(
+            status_code=404,
+            detail="Account not found"
+        )
+    
+    if account.status != AccountStatusEnum.active:
+        raise HTTPException(
+            status_code=400,
+            detail="Account is not active"
+        )
+    
+    if not account.phone_number:
+        raise HTTPException(
+            status_code=400,
+            detail="No phone number registered"
+        )
+    
+    if account.phone_verified:
+        raise HTTPException(
+            status_code=400,
+            detail="Phone number already verified"
+        )
+    
+    # Verify OTP
+    if not await verify_otp(account.phone_number, request.otp):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid OTP"
+        )
+    
+    # Update account
+    account.phone_verified = True
+    account.role_id = 2  # Upgrade to user_l2
+    db.commit()
+    
+    return {
+        "message": "Phone number verified successfully. Account upgraded to Level 2.",
+        "username": account.username,
+        "role": "user l2"
+    }
+
+class VerifyEmailRequest(BaseModel):
+    username: str
+    token: str
+
+class VerifyEmailResponse(BaseModel):
+    message: str
+    username: str
+    email: str
+
+@router.post("/verify-email", response_model=VerifyEmailResponse)
+async def verify_email(
+    request: VerifyEmailRequest,
+    db: Session = Depends(get_db)
+):
+    try:
+        # Verify token
+        payload = jwt.decode(request.token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        username: str = payload.get("sub")
+        new_email: str = payload.get("email")
+        
+        if username is None or new_email is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid token"
+            )
+        
+        if username != request.username:
+            raise HTTPException(
+                status_code=400,
+                detail="Token username mismatch"
+            )
+        
+        # Get account
+        account = db.query(Account).filter(Account.username == username).first()
+        if account is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Account not found"
+            )
+        
+        # Check if new email is already in use
+        existing_email = db.query(Account).filter(
+            Account.email == new_email,
+            Account.account_id != account.account_id
+        ).first()
+        if existing_email:
+            raise HTTPException(
+                status_code=400,
+                detail="Email already in use"
+            )
+        
+        # Update email and set email_verified to True
+        account.email = new_email
+        account.email_verified = True
+        db.commit()
+        db.refresh(account)
+        
+        return {
+            "message": "Email verified and updated successfully",
+            "username": account.username,
+            "email": account.email
+        }
+    except JWTError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired token"
+        )

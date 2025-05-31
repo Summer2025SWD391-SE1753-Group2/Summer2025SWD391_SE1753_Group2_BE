@@ -16,6 +16,7 @@ class Account(Base):
     role_id = Column(Integer, ForeignKey("role.role_id"))
     username = Column(String(100), unique=True, nullable=False)
     email = Column(String(100), unique=True, nullable=False)
+    email_verified = Column(Boolean, default=False)
     password_hash = Column(String(255), nullable=False)
     phone_number = Column(String(20), unique=True)
     phone_verified = Column(Boolean, default=False)

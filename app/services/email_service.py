@@ -94,4 +94,33 @@ async def send_reset_password_email(email: str, username: str):
     
     # Send email
     fm = FastMail(conf)
-    await fm.send_message(message) 
+    await fm.send_message(message)
+
+async def send_email_verification(email: str, username: str, new_email: str):
+    token_data = {
+        "sub": username,
+        "email": new_email,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=24)
+    }
+    token = jwt.encode(token_data, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    
+    verification_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
+    
+    subject = "Verify your new email address"
+    body = f"""
+    Hello {username},
+    
+    You have requested to change your email address to {new_email}.
+    Please click the link below to verify your new email address:
+    
+    {verification_url}
+    
+    This link will expire in 24 hours.
+    
+    If you did not request this change, please ignore this email.
+    
+    Best regards,
+    Your App Team
+    """
+    
+    await send_email(email, subject, body) 
