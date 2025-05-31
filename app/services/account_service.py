@@ -49,8 +49,8 @@ async def create_account(db: Session, account: AccountCreate) -> Account:
             phone_verified=False,  # Always set to False initially
             role_id=1,  # Always set to user_l1 initially
             status=AccountStatusEnum.inactive,  # Default status: inactive
-            avatar=None,
-            bio=None,
+            avatar=account.avatar if account.avatar and account.avatar != "string" else "https://img.freepik.com/premium-vector/person-with-blue-shirt-that-says-name-person_1029948-7040.jpg",
+            bio=account.bio if account.bio and account.bio != "string" else "Welcome to my profile!",
         )
 
         db.add(db_account)

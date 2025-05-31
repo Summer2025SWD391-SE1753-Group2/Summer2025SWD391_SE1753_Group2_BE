@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Text, Boolean, DateTime, Date
+from sqlalchemy.orm import relationship
 from app.db.base_class import Base
 from datetime import datetime, timezone
 
@@ -21,11 +22,14 @@ class Account(Base):
     phone_number = Column(String(20), unique=True)
     phone_verified = Column(Boolean, default=False)
     full_name = Column(String(255))
-    date_of_birth = Column(Date, nullable=True)  # Add this line
-    avatar = Column(Text, nullable=True, server_default="")
-    bio = Column(Text, nullable=True, server_default="")
+    date_of_birth = Column(Date, nullable=True)
+    avatar = Column(Text, nullable=True)
+    bio = Column(Text, nullable=True)
     status = Column(Enum(AccountStatusEnum), default=AccountStatusEnum.active)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     created_by = Column(String(100))
     updated_by = Column(String(100))
+
+    # Add relationship
+    role = relationship("Role", back_populates="accounts")

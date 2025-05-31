@@ -1,11 +1,12 @@
 from sqlalchemy import Column, Integer, String, Enum, DateTime
+from sqlalchemy.orm import relationship
 from app.db.base_class import Base
 from datetime import datetime, timezone
 import enum
 
 class RoleNameEnum(str, enum.Enum):
-    user_l1 = "user l1"
-    user_l2 = "user l2"
+    user_l1 = "user_l1"
+    user_l2 = "user_l2"
     moderator = "moderator"
     admin = "admin"
 
@@ -21,3 +22,6 @@ class Role(Base):
     updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     created_by = Column(String(100))
     updated_by = Column(String(100))
+
+    # Add relationship
+    accounts = relationship("Account", back_populates="role")

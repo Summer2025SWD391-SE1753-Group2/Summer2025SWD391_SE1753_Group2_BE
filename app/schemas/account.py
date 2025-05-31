@@ -67,13 +67,13 @@ class AccountBase(BaseModel):
 
 class AccountCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=100, example="khoipd8")
-    email: EmailStr = Field(..., example="KhoiPD8@gmail.com")
+    email: EmailStr = Field(..., example="khoipdse184586@fpt.edu.vn")
     password: str = Field(..., min_length=8, example="SecurePassword@123")
     full_name: str = Field(..., min_length=3, max_length=100, example="Phạm Đăng Khôi")
     date_of_birth: Optional[date] = None
-    phone_number: str = Field(..., min_length=10, max_length=15, example="0987654321")
-    avatar: Optional[str] = None
-    bio: Optional[str] = None
+    phone_number: str = Field(..., min_length=10, max_length=15, example="0937405359")
+    avatar: Optional[str] = Field(default="https://img.freepik.com/premium-vector/person-with-blue-shirt-that-says-name-person_1029948-7040.jpg", example="https://img.freepik.com/premium-vector/person-with-blue-shirt-that-says-name-person_1029948-7040.jpg")
+    bio: Optional[str] = Field(default="Welcome to my profile!", example="Welcome to my profile!")
 
     @field_validator("username")
     @classmethod
@@ -167,7 +167,9 @@ class AccountOut(AccountBase):
     role: RoleOut
     email_verified: bool
     phone_verified: bool
-    phone_number: Optional[str] = None
+    phone_number: str
     date_of_birth: Optional[date] = None
+    avatar: str
+    bio: str
 
     model_config = ConfigDict(from_attributes=True)

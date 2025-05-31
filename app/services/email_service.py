@@ -33,12 +33,15 @@ async def send_confirmation_email(email: str, username: str):
     
     # Create confirmation link - using the API endpoint directly
     # BE if FE is not existed
-    base_url = settings.BACKEND_CORS_ORIGINS[0] if isinstance(settings.BACKEND_CORS_ORIGINS, list) else settings.BACKEND_CORS_ORIGINS
+    # base_url = settings.BACKEND_CORS_ORIGINS[0] if isinstance(settings.BACKEND_CORS_ORIGINS, list) else settings.BACKEND_CORS_ORIGINS
     # Remove trailing slash from base_url if exists
-    base_url = base_url.rstrip('/')
+    # base_url = base_url.rstrip('/')
     # Remove leading slash from API_V1_STR if exists
-    api_path = settings.API_V1_STR.lstrip('/')
-    confirmation_link = f"{base_url}/{api_path}/accounts/confirm-email?token={token}"
+    # api_path = settings.API_V1_STR.lstrip('/')
+    # confirmation_link = f"{base_url}/{api_path}/accounts/confirm-email?token={token}"
+    
+    # Temporary fix: Use hardcoded URL
+    confirmation_link = f"http://localhost:8000/api/v1/accounts/confirm-email?token={token}"
     
     # Load and render template
     template = env.get_template('email_confirmation.html')
