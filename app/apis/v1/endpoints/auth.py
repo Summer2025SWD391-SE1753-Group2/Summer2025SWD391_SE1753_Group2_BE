@@ -188,13 +188,6 @@ async def refresh_token(
             detail="Invalid refresh token"
         )
 
-# Example of a protected route
-@router.get("/users/me", response_model=TokenData)
-async def read_users_me(
-    current_user: TokenData = Security(get_current_user, scopes=["me"])
-):
-    return current_user
-
 class ForgotPasswordRequest(BaseModel):
     username: str
 
