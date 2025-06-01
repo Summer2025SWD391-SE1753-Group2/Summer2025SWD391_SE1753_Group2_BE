@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
     POSTGRES_PORT: int
     DATABASE_URL: str
-
+    #config
     FIRST_SUPERUSER_GMAIL: EmailStr
     FIRST_SUPERUSER_USERNAME: str
     FIRST_SUPERUSER_PASSWORD: str
