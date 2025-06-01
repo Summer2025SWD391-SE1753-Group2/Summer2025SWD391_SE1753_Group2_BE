@@ -35,6 +35,8 @@ oauth2_scheme = OAuth2PasswordBearer(
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt_context.verify(plain_password, hashed_password)
+def get_password_hash(password: str) -> str:
+    return bcrypt_context.hash(password)
 
 def authenticate_account(db: Session, username: str, password: str):
     user = db.query(Account).filter(Account.username == username).first()

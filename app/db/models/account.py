@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Text, Boolean,
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
 from datetime import datetime, timezone
-
+from app.db.models.post import Post
 import enum
 import uuid
 from sqlalchemy.dialects.postgresql import UUID
@@ -26,10 +26,23 @@ class Account(Base):
     avatar = Column(Text, nullable=True)
     bio = Column(Text, nullable=True)
     status = Column(Enum(AccountStatusEnum), default=AccountStatusEnum.active)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
-    created_by = Column(String(100))
-    updated_by = Column(String(100))
+    
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
-    # Add relationship
-    role = relationship("Role", back_populates="accounts")
+
+
+   # Quan hệ
+    role = relationship("Role", back_populates="accounts", foreign_keys=[role_id])
+
+    # Liên kết Post mà account tạo hoặc cập nhật
+    posts_created = relationship(
+    "Post",
+    back_populates="creator",
+    foreign_keys=[Post.created_by]
+)
+    posts_updated = relationship(
+    "Post",
+    back_populates="updater",
+    foreign_keys=[Post.updated_by]
+)
