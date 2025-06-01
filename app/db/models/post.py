@@ -28,9 +28,9 @@ class Post(Base):
 
     # Quan hệ many-to-many
     tags = relationship("Tag", secondary="post_tag", back_populates="posts")
-    # materials = relationship("Material", secondary="post_material", back_populates="posts")
-    # topics = relationship("Topic", secondary="post_topic", back_populates="posts")
-    # images = relationship("PostImage", back_populates="post")
+    materials = relationship("Material", secondary="post_material", back_populates="posts")
+    topics = relationship("Topic", secondary="post_topic", back_populates="posts")
+    images = relationship("PostImage", back_populates="post", cascade="all, delete-orphan")
 
     # Quan hệ one-to-many ngược với Account
     creator = relationship("Account", back_populates="posts_created", foreign_keys=[created_by])
