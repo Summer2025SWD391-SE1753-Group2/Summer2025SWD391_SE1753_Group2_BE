@@ -6,6 +6,7 @@ import enum
 from datetime import datetime, timezone
 from app.db.base_class import Base
 from sqlalchemy import Enum
+from .post_tag import post_tag
 class TagStatusEnum(str, enum.Enum):
     active = "active"
     inactive = "inactive"
