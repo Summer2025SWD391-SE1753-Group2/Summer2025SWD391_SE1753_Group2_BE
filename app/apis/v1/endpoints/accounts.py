@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from app.schemas.account import AccountOut, AccountUpdate
-from app.services.account_service import confirm_email, update_account_profile, send_confirmation_email
+from app.services.account_service import confirm_email, update_account_profile, send_confirmation_email, get_account_profile
 from app.core.deps import get_db, get_current_active_account_l1
 from app.db.models.account import Account, AccountStatusEnum
 
@@ -82,3 +82,23 @@ async def update_profile(
     Update current account profile
     """
     return await update_account_profile(db, current_account, profile_update)
+
+@router.get("/me", response_model=AccountOut)
+async def view_own_profile(
+    current_account: Account = Depends(get_current_active_account_l1)
+):
+    """
+    View own profile
+    """
+    return current_account
+
+@router.get("/profiles/{username}", response_model=AccountOut)
+async def view_profile(
+    username: str,
+    db: Session = Depends(get_db),
+    current_account: Account = Depends(get_current_active_account_l1)
+):
+    """
+    View profile of a specific account
+    """
+    return await get_account_profile(db, username)

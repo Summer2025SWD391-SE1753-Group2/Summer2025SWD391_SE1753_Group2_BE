@@ -177,3 +177,22 @@ async def update_account_profile(db: Session, account: Account, profile_update: 
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+
+async def get_account_profile(db: Session, username: str) -> Account:
+    """
+    Get account profile by username
+    """
+    account = db.query(Account).filter(Account.username == username).first()
+    if not account:
+        raise HTTPException(
+            status_code=404,
+            detail="Account not found"
+        )
+    
+    if account.status != AccountStatusEnum.active:
+        raise HTTPException(
+            status_code=400,
+            detail="Account is not active"
+        )
+    
+    return account
