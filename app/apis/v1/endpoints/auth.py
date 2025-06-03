@@ -38,15 +38,19 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     return bcrypt_context.hash(password)
 
-def authenticate_account(db: Session, username: str, password: str):
-    user = db.query(Account).filter(Account.username == username).first()
-    if not user:
-        return None, "Incorrect username or password"
-    if not verify_password(password, user.password_hash):
-        return None, "Incorrect username or password"
-    if user.status != AccountStatusEnum.active:
+def authenticate_account(db: Session, username_or_email: str, password: str):
+    # Try to find account by username or email
+    account = db.query(Account).filter(
+        (Account.username == username_or_email) | (Account.email == username_or_email)
+    ).first()
+    
+    if not account:
+        return None, "Incorrect username/email or password"
+    if not verify_password(password, account.password_hash):
+        return None, "Incorrect username/email or password"
+    if account.status != AccountStatusEnum.active:
         return None, "Account is not active. Please confirm your email first."
-    return user, None
+    return account, None
 
 def create_access_token(username: str) -> str:
     expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
