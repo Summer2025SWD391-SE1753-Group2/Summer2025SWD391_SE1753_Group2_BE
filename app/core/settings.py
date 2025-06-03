@@ -61,6 +61,11 @@ class Settings(BaseSettings):
     # New settings
     FRONTEND_URL: str
 
+    # Twilio settings
+    TWILIO_PHONE_NUMBER: str
+    TWILIO_SID: str
+    TWILIO_AUTH_TOKEN: str
+
     class Config:
         env_file = ".env"
         case_sensitive = True

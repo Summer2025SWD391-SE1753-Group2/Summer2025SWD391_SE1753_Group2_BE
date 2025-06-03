@@ -14,7 +14,7 @@ from app.core.deps import get_db
 from app.db.models.account import Account, AccountStatusEnum
 from app.services.email_service import send_reset_password_email
 from app.services.otp_service import send_otp, verify_otp
-from app.schemas.account import AccountCreate, AccountOut
+from app.schemas.account import AccountCreate, AccountOut, SendOTPRequest, VerifyPhoneRequest, VerifyPhoneResponse
 from app.services.account_service import create_account
 from app.services.google_auth_service import get_google_token, get_google_user_info, get_or_create_google_account
 
@@ -344,62 +344,60 @@ async def reset_password_otp(
         "username": account.username
     }
 
-class VerifyPhoneRequest(BaseModel):
-    username: str
-    otp: str
-
-class VerifyPhoneResponse(BaseModel):
-    message: str
-    username: str
-    role: str
+@router.post("/send-otp")
+async def send_otp_phone(
+    data: SendOTPRequest,
+    db: Session = Depends(get_db),
+    token_data: TokenData = Depends(get_current_user)
+):
+    """
+    Gửi OTP xác thực số điện thoại để nâng cấp user lên user_l2.
+    - Chỉ cho phép nếu user chưa có phone_number hoặc phone_verified=False.
+    - phone_number là unique.
+    - OTP có hiệu lực 5 phút.
+    """
+    phone_number = data.phone_number
+    user = db.query(Account).filter(Account.username == token_data.username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Account not found")
+    if user.phone_verified:
+        raise HTTPException(status_code=400, detail="Phone number already verified")
+    existing = db.query(Account).filter(Account.phone_number == phone_number).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Phone number already in use")
+    await send_otp(phone_number)
+    user.phone_number = phone_number
+    user.phone_verified = False
+    db.commit()
+    return {"message": f"OTP sent to {phone_number}. OTP is valid for 5 minutes."}
 
 @router.post("/verify-phone", response_model=VerifyPhoneResponse)
 async def verify_phone(
     request: VerifyPhoneRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    token_data: TokenData = Depends(get_current_user)
 ):
-    # Find account
-    account = db.query(Account).filter(Account.username == request.username).first()
-    if not account:
-        raise HTTPException(
-            status_code=404,
-            detail="Account not found"
-        )
-    
-    if account.status != AccountStatusEnum.active:
-        raise HTTPException(
-            status_code=400,
-            detail="Account is not active"
-        )
-    
-    if not account.phone_number:
-        raise HTTPException(
-            status_code=400,
-            detail="No phone number registered"
-        )
-    
-    if account.phone_verified:
-        raise HTTPException(
-            status_code=400,
-            detail="Phone number already verified"
-        )
-    
-    # Verify OTP
-    if not await verify_otp(account.phone_number, request.otp):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid OTP"
-        )
-    
-    # Update account
-    account.phone_verified = True
-    account.role_id = 2  # Upgrade to user_l2
+    """
+    Xác thực OTP cho số điện thoại để nâng cấp user lên user_l2.
+    - Nếu OTP đúng và còn hạn: phone_verified=True, role_id=2 (user_l2)
+    - Nếu OTP sai/hết hạn: báo lỗi
+    """
+    user = db.query(Account).filter(Account.username == token_data.username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Account not found")
+    if not user.phone_number or user.phone_number != request.phone_number:
+        raise HTTPException(status_code=400, detail="Phone number mismatch")
+    if user.phone_verified:
+        raise HTTPException(status_code=400, detail="Phone number already verified")
+    if not await verify_otp(user.phone_number, request.otp):
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+    user.phone_verified = True
+    user.role_id = 2  # user_l2
     db.commit()
-    
     return {
         "message": "Phone number verified successfully. Account upgraded to Level 2.",
-        "username": account.username,
-        "role": "user l2"
+        "username": user.username,
+        "role": "user_l2"
     }
 
 class VerifyEmailRequest(BaseModel):

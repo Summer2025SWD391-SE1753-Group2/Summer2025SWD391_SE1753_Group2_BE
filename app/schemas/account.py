@@ -179,3 +179,26 @@ class AccountOut(AccountBase):
     updated_by: Optional[UUID]
 
     model_config = ConfigDict(from_attributes=True)
+
+class VerifyPhoneRequest(BaseModel):
+    phone_number: str
+    otp: str
+
+class VerifyPhoneResponse(BaseModel):
+    message: str
+    username: str
+    role: str
+
+class SendOTPRequest(BaseModel):
+    phone_number: str
+
+    @field_validator("phone_number")
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        # Nếu nhập 0xxxxxxxxx thì chuyển thành +84xxxxxxxxx
+        if v.startswith("0") and len(v) == 10:
+            v = "+84" + v[1:]
+        # Nếu nhập +84xxxxxxxxx thì giữ nguyên
+        if not (v.startswith("+84") and len(v) == 12 and v[3:].isdigit()):
+            raise ValueError("Phone number must be in format +84xxxxxxxxx (9 digits after +84)")
+        return v
