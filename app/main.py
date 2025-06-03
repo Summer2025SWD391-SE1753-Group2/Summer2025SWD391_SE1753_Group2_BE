@@ -4,9 +4,21 @@ from app.core.settings import settings
 from app.db.database import engine, SessionLocal
 from app.db.base_class import Base
 from fastapi.openapi.utils import get_openapi
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI(title=settings.PROJECT_NAME)
+
+# Thêm middleware CORS ngay sau khi khởi tạo app
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # FE đang chạy ở cổng 5173
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Import models để load vào metadata
-from app.db.models import account, role  # sửa models -> model
+from app.db.models import account, role
 
 # Tạo bảng
 Base.metadata.create_all(bind=engine)
@@ -29,10 +41,8 @@ def seed_roles_if_not_exist(db: Session):
 with SessionLocal() as db:
     seed_roles_if_not_exist(db)
 
-# Khởi tạo FastAPI
+# Khởi tạo router
 from app.apis.v1 import base as api_v1
-
-app = FastAPI(title=settings.PROJECT_NAME)
 app.include_router(api_v1.api_router, prefix=settings.API_V1_STR)
 
 def custom_openapi():
