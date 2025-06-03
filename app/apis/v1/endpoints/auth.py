@@ -17,6 +17,7 @@ from app.services.otp_service import send_otp, verify_otp
 from app.schemas.account import AccountCreate, AccountOut
 from app.services.account_service import create_account
 from app.services.google_auth_service import get_google_token, get_google_user_info, get_or_create_google_account
+from starlette.responses import RedirectResponse
 
 router = APIRouter()
 
@@ -502,15 +503,16 @@ async def google_login():
     """
     Redirect to Google OAuth login page
     """
-    return {
-        "url": f"https://accounts.google.com/o/oauth2/v2/auth?"
-               f"client_id={settings.CLIENT_ID}&"
-               f"redirect_uri={settings.GOOGLE_REDIRECT_URI}&"
-               f"response_type=code&"
-               f"scope=email profile&"
-               f"access_type=offline&"
-               f"prompt=consent"
-    }
+    url = (
+        f"https://accounts.google.com/o/oauth2/v2/auth?"
+        f"client_id={settings.CLIENT_ID}&"
+        f"redirect_uri={settings.GOOGLE_REDIRECT_URI}&"
+        f"response_type=code&"
+        f"scope=email profile&"
+        f"access_type=offline&"
+        f"prompt=consent"
+    )
+    return RedirectResponse(url)
 
 @router.get("/google/callback")
 async def google_callback(code: str, db: Session = Depends(get_db)):
@@ -519,28 +521,20 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
     """
     # Get Google token
     google_token = await get_google_token(code)
-    
     # Get Google user info
     google_user = await get_google_user_info(google_token.access_token)
-    
     # Get or create account
     account = await get_or_create_google_account(db, google_user)
-    
     # Create access token
     token_data = {
         "sub": account.username,
         "user_id": str(account.account_id),
         "scopes": ["me"]
     }
-    
     access_token = TokenService.create_access_token(token_data)
-    refresh_token = TokenService.create_refresh_token(token_data)
-    
     # Create token record
-    token_record = TokenService.create_token_record(db, account, access_token, refresh_token)
-    
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer"
-    }
+    TokenService.create_token_record(db, account, access_token)
+    # Redirect về FE kèm token
+    FE_URL = "http://localhost:5173/auth/google-callback"
+    redirect_url = f"{FE_URL}?token={access_token}"
+    return RedirectResponse(redirect_url)
