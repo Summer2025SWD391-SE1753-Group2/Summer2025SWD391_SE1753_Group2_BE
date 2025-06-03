@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 import os
+from fastapi.middleware.cors import CORSMiddleware
 
 # Load environment variables
 load_dotenv()
@@ -39,6 +40,16 @@ with SessionLocal() as db:
 from app.apis.v1 import base as api_v1
 
 app = FastAPI(title=settings.PROJECT_NAME)
+
+# Thêm CORS middleware cho FE localhost:5173
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(api_v1.api_router, prefix=settings.API_V1_STR)
 
 def custom_openapi():
