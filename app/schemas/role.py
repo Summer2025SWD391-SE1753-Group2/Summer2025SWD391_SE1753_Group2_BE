@@ -2,8 +2,8 @@ from pydantic import BaseModel
 from enum import Enum
 
 class RoleNameEnum(str, Enum):
-    user_l1 = "user l1"
-    user_l2 = "user l2"
+    user_l1 = "user_l1"
+    user_l2 = "user_l2"
     moderator = "moderator"
     admin = "admin"
 

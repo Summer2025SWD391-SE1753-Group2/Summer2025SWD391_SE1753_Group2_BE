@@ -17,10 +17,10 @@ def seed_roles_if_not_exist(db: Session):
 
     if db.query(Role).count() == 0:
         roles = [
-            Role(role_id=1, role_name=RoleNameEnum.user_l1, status=RoleStatusEnum.active, created_by="system", updated_by="system"),
-            Role(role_id=2, role_name=RoleNameEnum.user_l2, status=RoleStatusEnum.active, created_by="system", updated_by="system"),
-            Role(role_id=3, role_name=RoleNameEnum.moderator, status=RoleStatusEnum.active, created_by="system", updated_by="system"),
-            Role(role_id=4, role_name=RoleNameEnum.admin, status=RoleStatusEnum.active, created_by="system", updated_by="system"),
+            Role(role_id=1, role_name=RoleNameEnum.user_l1, status=RoleStatusEnum.active, created_by=None, updated_by=None),
+            Role(role_id=2, role_name=RoleNameEnum.user_l2, status=RoleStatusEnum.active, created_by=None, updated_by=None),
+            Role(role_id=3, role_name=RoleNameEnum.moderator, status=RoleStatusEnum.active, created_by=None, updated_by=None),
+            Role(role_id=4, role_name=RoleNameEnum.admin, status=RoleStatusEnum.active, created_by=None, updated_by=None),
         ]
         db.add_all(roles)
         db.commit()
