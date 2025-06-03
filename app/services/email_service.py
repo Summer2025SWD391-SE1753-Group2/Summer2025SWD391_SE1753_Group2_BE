@@ -73,10 +73,12 @@ async def send_reset_password_email(email: str, username: str):
     token = jwt.encode(token_data, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     
     # Create reset password link
-    base_url = settings.BACKEND_CORS_ORIGINS[0] if isinstance(settings.BACKEND_CORS_ORIGINS, list) else settings.BACKEND_CORS_ORIGINS
-    base_url = base_url.rstrip('/')
-    api_path = settings.API_V1_STR.lstrip('/')
-    reset_link = f"{base_url}/{api_path}/auth/reset-password?token={token}"
+    # base_url = settings.BACKEND_CORS_ORIGINS[0] if isinstance(settings.BACKEND_CORS_ORIGINS, list) else settings.BACKEND_CORS_ORIGINS
+    # base_url = str(base_url).rstrip('/')
+    # api_path = settings.API_V1_STR.lstrip('/')
+    # reset_link = f"{base_url}/{api_path}/auth/reset-password?token={token}"
+    reset_link = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+
     
     # Load and render template
     template = env.get_template('reset_password.html')
