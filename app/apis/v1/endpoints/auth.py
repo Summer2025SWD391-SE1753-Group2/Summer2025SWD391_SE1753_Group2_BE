@@ -544,3 +544,26 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
         "refresh_token": refresh_token,
         "token_type": "bearer"
     }
+
+@router.post("/logout")
+async def logout(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """
+    Logout by deactivating the current access token
+    """
+    # Get the token record
+    token_record = TokenService.get_active_token(db, token)
+    if not token_record:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
+    
+    # Deactivate the token
+    TokenService.deactivate_token(db, token_record.token_id)
+    
+    return {
+        "message": "Successfully logged out"
+    }
