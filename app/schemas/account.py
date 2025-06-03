@@ -71,7 +71,7 @@ class AccountCreate(BaseModel):
     password: str = Field(..., min_length=8, example="SecurePassword@123")
     full_name: Optional[str] = Field(None, min_length=3, max_length=100, example="Phạm Đăng Khôi")
     date_of_birth: Optional[date] = Field(None, example="2004-04-22")
-    phone_number: Optional[str] = Field(None, min_length=10, max_length=15, example="0937405359")
+    # phone_number: Optional[str] = Field(None, min_length=10, max_length=15, example="0937405359")
 
     @field_validator("username")
     @classmethod
@@ -117,15 +117,15 @@ class AccountCreate(BaseModel):
         except Exception as e:
             raise ValueError(str(e)) 
         
-    @field_validator("phone_number")
-    @classmethod
-    def validate_phone_number(cls, v: Optional[str]) -> Optional[str]:
-        try:
-            # Check if phone number is unique (you'll need to implement this in your database layer)
-            # For now, we'll just validate the format
-            return validate_phone_number(v) if v else v
-        except Exception as e:
-            raise ValueError(str(e))
+    # @field_validator("phone_number")
+    # @classmethod
+    # def validate_phone_number(cls, v: Optional[str]) -> Optional[str]:
+    #     try:
+    #         # Check if phone number is unique (you'll need to implement this in your database layer)
+    #         # For now, we'll just validate the format
+    #         return validate_phone_number(v) if v else v
+    #     except Exception as e:
+    #         raise ValueError(str(e))
 
 class AccountUpdate(BaseModel):
     email: Optional[EmailStr] = None

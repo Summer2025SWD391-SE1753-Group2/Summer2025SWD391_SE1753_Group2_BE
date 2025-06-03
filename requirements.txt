@@ -14,3 +14,5 @@ python-multipart
 bcrypt
 pydantic-settings
 fastapi-mail
+httpx
+requests
