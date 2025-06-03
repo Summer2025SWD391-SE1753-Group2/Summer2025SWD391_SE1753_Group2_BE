@@ -29,20 +29,20 @@ class Account(Base):
     
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_by = Column(UUID(as_uuid=True), ForeignKey("account.account_id"), nullable=True)
+    updated_by = Column(UUID(as_uuid=True), ForeignKey("account.account_id"), nullable=True)
 
-
-
-   # Quan hệ
+    # Quan hệ
     role = relationship("Role", back_populates="accounts", foreign_keys=[role_id])
 
     # Liên kết Post mà account tạo hoặc cập nhật
     posts_created = relationship(
-    "Post",
-    back_populates="creator",
-    foreign_keys=[Post.created_by]
-)
+        "Post",
+        back_populates="creator",
+        foreign_keys=[Post.created_by]
+    )
     posts_updated = relationship(
-    "Post",
-    back_populates="updater",
-    foreign_keys=[Post.updated_by]
-)
+        "Post",
+        back_populates="updater",
+        foreign_keys=[Post.updated_by]
+    )

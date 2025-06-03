@@ -8,8 +8,9 @@ from sqlalchemy.exc import IntegrityError
 from app.services.email_service import send_confirmation_email, send_email_verification
 from jose import jwt, JWTError
 from app.core.settings import settings
+from datetime import datetime
 
-def check_unique_fields(db: Session, username: str = None, email: str = None):
+def check_unique_fields(db: Session, username: str = None, email: str = None, phone_number: str = None):
     if username:
         existing_username = db.execute(
             text("SELECT 1 FROM account WHERE username = :username"),
@@ -31,11 +32,22 @@ def check_unique_fields(db: Session, username: str = None, email: str = None):
                 status_code=400,
                 detail="Email already exists"
             )
+            
+    if phone_number:
+        existing_phone = db.execute(
+            text("SELECT 1 FROM account WHERE phone_number = :phone_number"),
+            {"phone_number": phone_number}
+        ).first()
+        if existing_phone:
+            raise HTTPException(
+                status_code=400,
+                detail="Phone number already exists"
+            )
 
 async def create_account(db: Session, account: AccountCreate) -> Account:
     try:
         # Check unique constraints before creating
-        check_unique_fields(db, username=account.username, email=account.email)
+        check_unique_fields(db, username=account.username, email=account.email, phone_number=account.phone_number)
         
         hashed_password = get_password_hash(account.password)
         
@@ -49,13 +61,21 @@ async def create_account(db: Session, account: AccountCreate) -> Account:
             phone_verified=False,  # Always set to False initially
             role_id=1,  # Always set to user_l1 initially
             status=AccountStatusEnum.inactive,  # Default status: inactive
-            avatar=account.avatar if account.avatar and account.avatar != "string" else "https://img.freepik.com/premium-vector/person-with-blue-shirt-that-says-name-person_1029948-7040.jpg",
-            bio=account.bio if account.bio and account.bio != "string" else "Welcome to my profile!",
-            created_by=account.username,  # Set created_by to username
-            updated_by=account.username   # Set updated_by to username
+            avatar="https://img.freepik.com/premium-vector/person-with-blue-shirt-that-says-name-person_1029948-7040.jpg",
+            bio="Welcome to my profile!",
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+            created_by=None,
+            updated_by=None
         )
 
         db.add(db_account)
+        db.commit()
+        db.refresh(db_account)
+
+        # Update created_by and updated_by to the new account_id
+        db_account.created_by = db_account.account_id
+        db_account.updated_by = db_account.account_id
         db.commit()
         db.refresh(db_account)
 

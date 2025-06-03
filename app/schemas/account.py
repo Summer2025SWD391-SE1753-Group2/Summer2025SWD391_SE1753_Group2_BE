@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 from enum import Enum
 from uuid import UUID
 from typing import Optional
-from datetime import date
+from datetime import date, datetime
 from fastapi import HTTPException
 
 from app.core.validators import (
@@ -69,16 +69,16 @@ class AccountCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=100, example="khoipd8")
     email: EmailStr = Field(..., example="khoipdse184586@fpt.edu.vn")
     password: str = Field(..., min_length=8, example="SecurePassword@123")
-    full_name: str = Field(..., min_length=3, max_length=100, example="Phạm Đăng Khôi")
-    date_of_birth: Optional[date] = None
-    phone_number: str = Field(..., min_length=10, max_length=15, example="0937405359")
-    avatar: Optional[str] = Field(default="https://img.freepik.com/premium-vector/person-with-blue-shirt-that-says-name-person_1029948-7040.jpg", example="https://img.freepik.com/premium-vector/person-with-blue-shirt-that-says-name-person_1029948-7040.jpg")
-    bio: Optional[str] = Field(default="Welcome to my profile!", example="Welcome to my profile!")
+    full_name: Optional[str] = Field(None, min_length=3, max_length=100, example="Phạm Đăng Khôi")
+    date_of_birth: Optional[date] = Field(None, example="2004-04-22")
+    phone_number: Optional[str] = Field(None, min_length=10, max_length=15, example="0937405359")
 
     @field_validator("username")
     @classmethod
     def validate_username(cls, v: str) -> str:
         try:
+            # Check if username is unique (you'll need to implement this in your database layer)
+            # For now, we'll just validate the format
             return validate_username(v)
         except Exception as e:
             raise ValueError(str(e))
@@ -87,6 +87,8 @@ class AccountCreate(BaseModel):
     @classmethod
     def validate_password(cls, v: str) -> str:
         try:
+            # Check if password is unique (you'll need to implement this in your database layer)
+            # For now, we'll just validate the format
             return validate_password(v)
         except Exception as e:
             raise ValueError(str(e))
@@ -101,9 +103,9 @@ class AccountCreate(BaseModel):
 
     @field_validator("full_name")
     @classmethod
-    def validate_full_name(cls, v: str) -> str:
+    def validate_full_name(cls, v: Optional[str]) -> Optional[str]:
         try:
-            return validate_full_name(v)
+            return validate_full_name(v) if v else v
         except Exception as e:
             raise ValueError(str(e))
 
@@ -117,9 +119,11 @@ class AccountCreate(BaseModel):
         
     @field_validator("phone_number")
     @classmethod
-    def validate_phone_number(cls, v: str) -> str:
+    def validate_phone_number(cls, v: Optional[str]) -> Optional[str]:
         try:
-            return validate_phone_number(v)
+            # Check if phone number is unique (you'll need to implement this in your database layer)
+            # For now, we'll just validate the format
+            return validate_phone_number(v) if v else v
         except Exception as e:
             raise ValueError(str(e))
 
@@ -169,7 +173,9 @@ class AccountOut(AccountBase):
     phone_verified: bool
     phone_number: str
     date_of_birth: Optional[date] = None
-    avatar: str
-    bio: str
+    created_at: datetime
+    updated_at: datetime
+    created_by: Optional[UUID]
+    updated_by: Optional[UUID]
 
     model_config = ConfigDict(from_attributes=True)
