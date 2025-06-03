@@ -19,7 +19,7 @@ class Account(Base):
     email = Column(String(100), unique=True, nullable=False)
     email_verified = Column(Boolean, default=False)
     password_hash = Column(String(255), nullable=False)
-    phone_number = Column(String(20), unique=True)
+    phone_number = Column(String(20), unique=True, nullable=True)
     phone_verified = Column(Boolean, default=False)
     full_name = Column(String(255))
     date_of_birth = Column(Date, nullable=True)

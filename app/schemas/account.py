@@ -171,7 +171,7 @@ class AccountOut(AccountBase):
     role: RoleOut
     email_verified: bool
     phone_verified: bool
-    phone_number: str
+    phone_number: Optional[str] = None
     date_of_birth: Optional[date] = None
     created_at: datetime
     updated_at: datetime
