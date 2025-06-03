@@ -22,24 +22,27 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
     POSTGRES_PORT: int
     DATABASE_URL: str
-    #config
+
+    # Superuser settings
     FIRST_SUPERUSER_GMAIL: EmailStr
     FIRST_SUPERUSER_USERNAME: str
     FIRST_SUPERUSER_PASSWORD: str
     FIRST_SUPERUSER_API_TOKEN: Optional[str] = ""
 
-    # Google OAuth
+    # Google OAuth settings
     CLIENT_ID: str
     CLIENT_SECRET: str
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/google/callback"
 
-    # Security
+    # Security settings
     JWT_SECRET_KEY: str
-    JWT_ALGORITHM: str
+    JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 11520
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 43200
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    REFRESH_TOKEN_SECRET_KEY: str
 
-    # CORS
+    # CORS settings
     FRONTEND_HOST: List[AnyHttpUrl] = []
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
 
@@ -60,5 +63,10 @@ class Settings(BaseSettings):
         case_sensitive = True
         env_file_encoding = "utf-8"
         extra = "ignore"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.DATABASE_URL:
+            self.DATABASE_URL = self.DATABASE_URL
 
 settings = Settings(_env_file=Path(__file__).parent.parent.parent / ".env")
