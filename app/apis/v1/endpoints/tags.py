@@ -13,7 +13,7 @@ from app.services.tag_service import (
     delete_tag,
 )
 
-router = APIRouter(prefix="/tags", tags=["Tags"])
+router = APIRouter()
 
 @router.post("/", response_model=TagOut, status_code=status.HTTP_201_CREATED)
 async def create_tag_endpoint(tag_data: TagCreate, db: Session = Depends(get_db)):

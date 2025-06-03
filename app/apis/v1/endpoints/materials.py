@@ -13,7 +13,7 @@ from app.services.material_service import (
     delete_material,
 )
 
-router = APIRouter(prefix="/materials", tags=["Materials"])
+router = APIRouter()
 
 
 @router.post("/", response_model=MaterialOut, status_code=status.HTTP_201_CREATED)

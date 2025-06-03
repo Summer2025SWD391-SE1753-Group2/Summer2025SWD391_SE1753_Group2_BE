@@ -13,7 +13,7 @@ from app.services.topic_service import (
     delete_topic,
 )
 
-router = APIRouter(prefix="/topics", tags=["Topics"])
+router = APIRouter()
 
 
 @router.post("/", response_model=TopicOut, status_code=status.HTTP_201_CREATED)
