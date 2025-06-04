@@ -18,7 +18,7 @@ class TagBase(BaseModel):
 
 # Schema khi tạo mới
 class TagCreate(TagBase):
-    pass
+    created_by: Optional[UUID] = None
 
 
 # Schema khi update
