@@ -9,7 +9,7 @@ from app.services.post_service import (
     create_post, get_post_by_id, get_all_posts, update_post, delete_post
 )
 
-router = APIRouter(prefix="/posts", tags=["Posts"])
+router = APIRouter()
 
 
 @router.post("/", response_model=PostOut, status_code=status.HTTP_201_CREATED)

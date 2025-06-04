@@ -19,6 +19,7 @@ def check_material_name_unique(db: Session, name: str):
 
 async def create_material(db: Session, material_data: MaterialCreate, created_by: UUID) -> Material:
     try:
+        print(f"[LOG] Create material with data: {material_data}, created_by: {created_by}")
         check_material_name_unique(db, name=material_data.name)
 
         db_material = Material(
@@ -32,15 +33,18 @@ async def create_material(db: Session, material_data: MaterialCreate, created_by
         db.add(db_material)
         db.commit()
         db.refresh(db_material)
+        print(f"[LOG] Create material successfully: {db_material}")
         return db_material
 
     except IntegrityError as e:
         db.rollback()
+        print(f"[ERROR] IntegrityError when creating material: {e}")
         if "material_name_key" in str(e.orig):
             raise HTTPException(status_code=400, detail="Material name already exists")
         raise HTTPException(status_code=400, detail="Failed to create material")
     except Exception as e:
         db.rollback()
+        print(f"[ERROR] Exception when creating material: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 
