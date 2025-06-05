@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     # Google OAuth settings
     CLIENT_ID: str
     CLIENT_SECRET: str
-    GOOGLE_REDIRECT_URI: str = "http://localhost:5173/auth/google-callback"
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/google/callback"
     FRONTEND_URL: str = "http://localhost:5173"
 
 
