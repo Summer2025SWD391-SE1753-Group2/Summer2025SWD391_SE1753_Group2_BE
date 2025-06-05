@@ -531,7 +531,7 @@ async def google_callback_exchange(
             status_code=400,
             detail="Authorization code is required"
         )
-    
+     
     try:
         # Get Google token
         google_token = await get_google_token(code)

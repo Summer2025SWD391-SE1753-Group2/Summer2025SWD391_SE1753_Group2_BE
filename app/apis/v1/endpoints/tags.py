@@ -31,8 +31,8 @@ async def get_tag_by_id_endpoint(tag_id: UUID, db: Session = Depends(get_db)):
     return tag
 
 @router.get("/", response_model=List[TagOut])
-async def get_all_tags_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return await get_all_tags(db, skip=skip, limit=limit)
+def get_all_tags_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    return get_all_tags(db, skip=skip, limit=limit) 
 
 @router.put("/{tag_id}", response_model=TagOut)
 async def update_tag_endpoint(tag_id: UUID, tag_data: TagUpdate, db: Session = Depends(get_db)):
