@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     CLIENT_ID: str
     CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str = "http://localhost:5173/auth/google-callback"
+    FRONTEND_URL: str = "http://localhost:5173"
+
 
     # Security settings
     JWT_SECRET_KEY: str

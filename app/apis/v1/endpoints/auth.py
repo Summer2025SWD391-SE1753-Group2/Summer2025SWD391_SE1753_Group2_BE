@@ -2,6 +2,7 @@ from datetime import timedelta, datetime, timezone
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Security, Body
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer, SecurityScopes
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from starlette import status
@@ -506,42 +507,101 @@ async def google_login():
     """
     Redirect to Google OAuth login page
     """
-    return {
-        "url": f"https://accounts.google.com/o/oauth2/v2/auth?"
-               f"client_id={settings.CLIENT_ID}&"
-               f"redirect_uri={settings.GOOGLE_REDIRECT_URI}&"
-               f"response_type=code&"
-               f"scope=email profile&"
-               f"access_type=offline&"
-               f"prompt=consent"
-    }
+    return RedirectResponse(
+        url=f"https://accounts.google.com/o/oauth2/v2/auth?"
+            f"client_id={settings.CLIENT_ID}&"
+            f"redirect_uri={settings.GOOGLE_REDIRECT_URI}&"
+            f"response_type=code&"
+            f"scope=email profile&"
+            f"access_type=offline&"
+            f"prompt=consent"
+    )
+
+@router.post("/google/callback")
+async def google_callback_exchange(
+    request: dict = Body(...),  # Expecting {"code": "authorization_code"}
+    db: Session = Depends(get_db)
+):
+    """
+    Exchange Google authorization code for access tokens
+    """
+    code = request.get("code")
+    if not code:
+        raise HTTPException(
+            status_code=400,
+            detail="Authorization code is required"
+        )
+    
+    try:
+        # Get Google token
+        google_token = await get_google_token(code)
+        
+        # Get Google user info
+        google_user = await get_google_user_info(google_token.access_token)
+        
+        # Get or create account
+        account = await get_or_create_google_account(db, google_user)
+        
+        # Create access token
+        token_data = {
+            "sub": account.username,
+            "user_id": str(account.account_id),
+            "scopes": ["me"]
+        }
+        
+        access_token = TokenService.create_access_token(token_data)
+        refresh_token = TokenService.create_refresh_token(token_data)
+        
+        # Create token record
+        token_record = TokenService.create_token_record(db, account, access_token, refresh_token)
+        
+        # Return tokens and user info
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "user": {
+                "account_id": account.account_id,
+                "username": account.username,
+                "email": account.email,
+                "full_name": account.full_name,
+                "role": account.role.role_name if account.role else "user",
+                "phone_verified": account.phone_verified or False,
+                "email_verified": account.email_verified or False,
+                "status": account.status.value if account.status else "active"
+            }
+        }
+        
+    except Exception as e:
+        print(f"Google OAuth exchange error: {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to exchange authorization code: {str(e)}"
+        )
 
 @router.get("/google/callback")
-async def google_callback(code: str, db: Session = Depends(get_db)):
+async def google_callback_redirect(
+    code: str = None, 
+    error: str = None,
+    state: str = None
+):
     """
-    Handle Google OAuth callback
+    Handle Google OAuth redirect callback
     """
-    # Get Google token
-    google_token = await get_google_token(code)
+    # Frontend URL - should be configurable in settings
+    frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
     
-    # Get Google user info
-    google_user = await get_google_user_info(google_token.access_token)
+    # Handle error case
+    if error:
+        return RedirectResponse(
+            url=f"{frontend_url}/auth/google/callback?error={error}"
+        )
     
-    # Get or create account
-    account = await get_or_create_google_account(db, google_user)
-    
-    # Create access token
-    token_data = {
-        "sub": account.username,
-        "user_id": str(account.account_id),
-        "scopes": ["me"]
-    }
-    
-    access_token = TokenService.create_access_token(token_data)
-    refresh_token = TokenService.create_refresh_token(token_data)
-    
-    # Create token record
-    token_record = TokenService.create_token_record(db, account, access_token, refresh_token)
+    # Handle missing code
+    if not code:
+        return RedirectResponse(
+            url=f"{frontend_url}/auth/google/callback?error=missing_code"
+        )
     
     return {
         "access_token": access_token,
@@ -571,3 +631,5 @@ async def logout(
     return {
         "message": "Successfully logged out"
     }
+
+
