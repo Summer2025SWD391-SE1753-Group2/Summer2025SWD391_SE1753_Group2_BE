@@ -53,11 +53,14 @@ def authenticate_account(db: Session, username_or_email: str, password: str):
         return None, "Account is not active. Please confirm your email first."
     return account, None
 
-def create_access_token(username: str) -> str:
+def create_access_token(user: Account) -> str:
     expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     expire = datetime.now(timezone.utc) + expires_delta
+    
     to_encode = {
-        "sub": username,
+        "sub": user.username,
+        "user_id": str(user.account_id),
+        "role": user.role.role_name,  # Add role to token
         "exp": expire
     }
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
@@ -129,16 +132,19 @@ async def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    # Create direct access token with role
+    access_token = create_access_token(user)
+    
+    # Create refresh token with role
     token_data = {
         "sub": user.username,
         "user_id": str(user.account_id),
+        "role": user.role.role_name,
         "scopes": form_data.scopes
     }
-    
-    access_token = TokenService.create_access_token(token_data)
     refresh_token = TokenService.create_refresh_token(token_data)
     
-    # Create token record in database
+    # Create token record
     token_record = TokenService.create_token_record(db, user, access_token, refresh_token)
     
     return {

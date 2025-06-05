@@ -26,9 +26,10 @@ async def get_current_user(
             settings.JWT_SECRET_KEY, 
             algorithms=[settings.JWT_ALGORITHM]
         )
-        # Use user_id instead of sub
+        # Get both user_id and role from token
         account_id = payload.get("user_id")
-        if account_id is None:
+        role = payload.get("role")  # Get role from token
+        if account_id is None or role is None:
             raise credentials_exception
             
     except JWTError:
@@ -38,19 +39,27 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
         
+    # Verify role matches between token and database
+    if role != user.role.role_name:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Role mismatch between token and database"
+        )
+        
     return user
 def check_roles(allowed_roles: List[RoleNameEnum]):
     async def role_checker(current_user: Account = Depends(get_current_user)):
         if not current_user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Chưa đăng nhập"
+                detail="Not authenticated"
             )
         
         if current_user.role.role_name not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Không có quyền thực hiện hành động này"
+                detail="Permission denied for this action"
             )
+            
         return current_user
     return role_checker
