@@ -16,3 +16,4 @@ pydantic-settings
 fastapi-mail
 httpx
 requests
+twilio

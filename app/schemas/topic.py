@@ -16,8 +16,7 @@ class TopicBase(BaseModel):
 
 
 class TopicCreate(TopicBase):
-    pass
-
+    created_by: Optional[UUID] = None
 
 class TopicUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=150)

@@ -10,37 +10,75 @@ from app.schemas.post import PostCreate, PostUpdate
 
 
 async def create_post(db: Session, post_data: PostCreate) -> Post:
-    post = Post(
-        title=post_data.title,
-        content=post_data.content,
-        status=post_data.status,
-        rejection_reason=post_data.rejection_reason,
-        created_by=post_data.created_by,
-        updated_by=post_data.created_by,
-    )
+    try:
+        post = Post(
+            title=post_data.title,
+            content=post_data.content,
+            status=post_data.status,
+            rejection_reason=post_data.rejection_reason,
+            created_by=post_data.created_by,
+            updated_by=post_data.created_by,
+        )
 
-    # Nhiều nhiều
-    if post_data.tag_ids:
-        post.tags = db.query(Tag).filter(Tag.tag_id.in_(post_data.tag_ids)).all()
+        # Kiểm tra và thêm tags
+        if post_data.tag_ids:
+            tags = db.query(Tag).filter(Tag.tag_id.in_(post_data.tag_ids)).all()
+            if len(tags) != len(post_data.tag_ids):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Một số tag_id không tồn tại"
+                )
+            post.tags = tags
 
-    if post_data.material_ids:
-        post.materials = db.query(Material).filter(Material.material_id.in_(post_data.material_ids)).all()
+        # Kiểm tra và thêm materials
+        if post_data.material_ids:
+            materials = db.query(Material).filter(
+                Material.material_id.in_(post_data.material_ids)
+            ).all()
+            if len(materials) != len(post_data.material_ids):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Một số material_id không tồn tại"
+                )
+            post.materials = materials
 
-    if post_data.topic_ids:
-        post.topics = db.query(Topic).filter(Topic.topic_id.in_(post_data.topic_ids)).all()
+        # Kiểm tra và thêm topics
+        if post_data.topic_ids:
+            topics = db.query(Topic).filter(
+                Topic.topic_id.in_(post_data.topic_ids)
+            ).all()
+            if len(topics) != len(post_data.topic_ids):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Một số topic_id không tồn tại"
+                )
+            post.topics = topics
 
-    db.add(post)
-    db.commit()
-    db.refresh(post)
+        # Thêm post và commit để lấy post_id
+        db.add(post)
+        db.commit()
+        db.refresh(post)
 
-    # Thêm ảnh
-    for img in post_data.images:
-        db_image = PostImage(url=img.url, post_id=post.post_id)
-        db.add(db_image)
-    db.commit()
+        # Thêm images
+        if post_data.images:
+            for image_url in post_data.images:
+                db_image = PostImage(
+                    image_url=image_url,
+                    post_id=post.post_id
+                )
+                db.add(db_image)
+            db.commit()
 
-    db.refresh(post)
-    return post
+        # Refresh lại để lấy tất cả relationships
+        db.refresh(post)
+        return post
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Lỗi khi tạo post: {str(e)}"
+        )
 
 
 def get_post_by_id(db: Session, post_id: UUID) -> Post:

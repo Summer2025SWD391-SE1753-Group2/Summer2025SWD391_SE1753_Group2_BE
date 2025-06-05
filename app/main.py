@@ -1,11 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from dotenv import load_dotenv
-import os
-
-# Load environment variables
-load_dotenv()
-
 from app.core.settings import settings
 from app.db.database import engine, SessionLocal
 from app.db.base_class import Base

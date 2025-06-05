@@ -13,11 +13,15 @@ from app.services.tag_service import (
     delete_tag,
 )
 
-router = APIRouter(prefix="/tags", tags=["Tags"])
+router = APIRouter()
 
 @router.post("/", response_model=TagOut, status_code=status.HTTP_201_CREATED)
-async def create_tag_endpoint(tag_data: TagCreate, db: Session = Depends(get_db)):
-    return await create_tag(db, tag_data)
+async def create_tag_endpoint(
+    tag_data: TagCreate,
+    db: Session = Depends(get_db),
+):
+    dummy_user_id = tag_data.created_by or UUID("00000000-0000-0000-0000-000000000000")
+    return await create_tag(db, tag_data, created_by=dummy_user_id)
 
 @router.get("/{tag_id}", response_model=TagOut)
 async def get_tag_by_id_endpoint(tag_id: UUID, db: Session = Depends(get_db)):

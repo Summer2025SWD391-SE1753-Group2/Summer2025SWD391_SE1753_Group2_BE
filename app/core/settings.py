@@ -32,8 +32,9 @@ class Settings(BaseSettings):
     # Google OAuth settings
     CLIENT_ID: str
     CLIENT_SECRET: str
-    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/google/callback"
+    GOOGLE_REDIRECT_URI: str = "http://localhost:5173/auth/google-callback"
     FRONTEND_URL: str = "http://localhost:5173"
+
 
     # Security settings
     JWT_SECRET_KEY: str
@@ -58,6 +59,14 @@ class Settings(BaseSettings):
     EMAILS_FROM_NAME: str
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
     EMAIL_TEST_USER: EmailStr
+
+    # New settings
+    FRONTEND_URL: str
+
+    # Twilio settings
+    TWILIO_PHONE_NUMBER: str
+    TWILIO_SID: str
+    TWILIO_AUTH_TOKEN: str
 
     class Config:
         env_file = ".env"

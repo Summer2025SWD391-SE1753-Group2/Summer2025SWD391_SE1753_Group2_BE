@@ -47,7 +47,7 @@ def check_unique_fields(db: Session, username: str = None, email: str = None, ph
 async def create_account(db: Session, account: AccountCreate) -> Account:
     try:
         # Check unique constraints before creating
-        check_unique_fields(db, username=account.username, email=account.email, phone_number=account.phone_number)
+        check_unique_fields(db, username=account.username, email=account.email)
         
         hashed_password = get_password_hash(account.password)
         
@@ -57,7 +57,7 @@ async def create_account(db: Session, account: AccountCreate) -> Account:
             password_hash=hashed_password,
             full_name=account.full_name,
             date_of_birth=account.date_of_birth,
-            phone_number=account.phone_number,
+            phone_number=None,
             phone_verified=False,  # Always set to False initially
             role_id=1,  # Always set to user_l1 initially
             status=AccountStatusEnum.inactive,  # Default status: inactive
