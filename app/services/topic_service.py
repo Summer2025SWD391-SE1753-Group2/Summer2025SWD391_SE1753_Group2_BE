@@ -3,6 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 from sqlalchemy import text
 from uuid import UUID
+from datetime import datetime, timezone
 
 from app.db.models.topic import Topic, TopicStatusEnum
 from app.schemas.topic import TopicCreate, TopicUpdate
@@ -17,7 +18,7 @@ def check_topic_name_unique(db: Session, name: str):
         raise HTTPException(status_code=400, detail="Topic name already exists")
 
 
-async def create_topic(db: Session, topic_data: TopicCreate, created_by: UUID) -> Topic:
+def create_topic(db: Session, topic_data: TopicCreate, created_by: UUID) -> Topic:
     try:
         check_topic_name_unique(db, name=topic_data.name)
 
@@ -54,7 +55,7 @@ def get_all_topics(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Topic).offset(skip).limit(limit).all()
 
 
-async def update_topic(db: Session, topic_id: UUID, topic_update: TopicUpdate, updated_by: UUID) -> Topic:
+def update_topic(db: Session, topic_id: UUID, topic_update: TopicUpdate, updated_by: UUID) -> Topic:
     topic = get_topic_by_id(db, topic_id)
 
     if topic_update.name and topic_update.name != topic.name:
@@ -64,7 +65,9 @@ async def update_topic(db: Session, topic_id: UUID, topic_update: TopicUpdate, u
     if topic_update.status:
         topic.status = topic_update.status
 
+    # Update timestamp and user
     topic.updated_by = updated_by
+    topic.updated_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(topic)

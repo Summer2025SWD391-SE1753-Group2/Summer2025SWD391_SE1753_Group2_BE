@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 from sqlalchemy import text
 from uuid import UUID
-
+from datetime import datetime, timezone
 from app.db.models.tag import Tag, TagStatusEnum
 from app.schemas.tag import TagCreate, TagUpdate
 
@@ -17,7 +17,7 @@ def check_tag_name_unique(db: Session, name: str):
         raise HTTPException(status_code=400, detail="Tag name already exists")
 
 
-async def create_tag(db: Session, tag_data: TagCreate, created_by: UUID) -> Tag:
+def create_tag(db: Session, tag_data: TagCreate, created_by: UUID) -> Tag:
     try:
         check_tag_name_unique(db, name=tag_data.name)
 
@@ -32,15 +32,11 @@ async def create_tag(db: Session, tag_data: TagCreate, created_by: UUID) -> Tag:
         db.commit()
         db.refresh(db_tag)
         return db_tag
-
     except IntegrityError as e:
         db.rollback()
         if "tag_name_key" in str(e.orig):
             raise HTTPException(status_code=400, detail="Tag name already exists")
         raise HTTPException(status_code=400, detail="Failed to create tag")
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
 
 
 def get_tag_by_id(db: Session, tag_id: UUID) -> Tag:
@@ -54,7 +50,7 @@ def get_all_tags(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Tag).offset(skip).limit(limit).all()
 
 
-async def update_tag(db: Session, tag_id: UUID, tag_update: TagUpdate, updated_by: UUID) -> Tag:
+def update_tag(db: Session, tag_id: UUID, tag_update: TagUpdate, updated_by: UUID) -> Tag:
     tag = get_tag_by_id(db, tag_id)
 
     if tag_update.name and tag_update.name != tag.name:
@@ -64,11 +60,13 @@ async def update_tag(db: Session, tag_id: UUID, tag_update: TagUpdate, updated_b
     if tag_update.status:
         tag.status = tag_update.status
 
+    # Use the authenticated user's ID
     tag.updated_by = updated_by
+    tag.updated_at = datetime.now(timezone.utc)  # Add this line to update timestamp
+    
     db.commit()
     db.refresh(tag)
     return tag
-
 
 def delete_tag(db: Session, tag_id: UUID):
     tag = get_tag_by_id(db, tag_id)

@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List
-
+from app.db.models.account import Account
 from app.core.deps import get_db
+from app.apis.v1.endpoints.check_role import get_current_user  # Add this import
+
 from app.schemas.tag import TagCreate, TagUpdate, TagOut
 from app.services.tag_service import (
     create_tag,
@@ -16,16 +18,16 @@ from app.services.tag_service import (
 router = APIRouter()
 
 @router.post("/", response_model=TagOut, status_code=status.HTTP_201_CREATED)
-async def create_tag_endpoint(
+def create_tag_endpoint(
     tag_data: TagCreate,
     db: Session = Depends(get_db),
 ):
     dummy_user_id = tag_data.created_by or UUID("00000000-0000-0000-0000-000000000000")
-    return await create_tag(db, tag_data, created_by=dummy_user_id)
+    return create_tag(db, tag_data, created_by=dummy_user_id)
 
 @router.get("/{tag_id}", response_model=TagOut)
-async def get_tag_by_id_endpoint(tag_id: UUID, db: Session = Depends(get_db)):
-    tag = await get_tag_by_id(db, tag_id)
+def get_tag_by_id_endpoint(tag_id: UUID, db: Session = Depends(get_db)):
+    tag = get_tag_by_id(db, tag_id)
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
     return tag
@@ -35,16 +37,23 @@ def get_all_tags_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends
     return get_all_tags(db, skip=skip, limit=limit) 
 
 @router.put("/{tag_id}", response_model=TagOut)
-async def update_tag_endpoint(tag_id: UUID, tag_data: TagUpdate, db: Session = Depends(get_db)):
-    tag = await get_tag_by_id(db, tag_id)
+def update_tag_endpoint(
+    tag_id: UUID,
+    tag_data: TagUpdate,
+    db: Session = Depends(get_db),
+    current_user: Account = Depends(get_current_user)  # Add authentication
+):
+    tag = get_tag_by_id(db, tag_id)
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
-    return await update_tag(db, tag_id, tag_data)
+
+    # Use the authenticated user's ID
+    return update_tag(db, tag_id, tag_data, updated_by=current_user.account_id)
 
 @router.delete("/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_tag_endpoint(tag_id: UUID, db: Session = Depends(get_db)):
-    tag = await get_tag_by_id(db, tag_id)
+def delete_tag_endpoint(tag_id: UUID, db: Session = Depends(get_db)):
+    tag = get_tag_by_id(db, tag_id)
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
-    await delete_tag(db, tag_id)
+    delete_tag(db, tag_id)
     return

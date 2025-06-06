@@ -27,6 +27,8 @@ class TagUpdate(BaseModel):
     status: Optional[TagStatusEnum] = None
 
 
+
+
 # Schema khi trả dữ liệu ra ngoài
 class TagOut(TagBase):
     tag_id: UUID

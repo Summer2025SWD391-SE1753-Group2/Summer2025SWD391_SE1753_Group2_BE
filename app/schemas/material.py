@@ -27,7 +27,6 @@ class MaterialUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=150)
     status: Optional[MaterialStatusEnum] = None
     image_url: Optional[str] = Field(None, max_length=500)
-    updated_by: Optional[UUID] = None
 
 
 # Schema khi trả về dữ liệu
