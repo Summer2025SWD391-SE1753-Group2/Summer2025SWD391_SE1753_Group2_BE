@@ -89,7 +89,16 @@ async def create_post(db: Session, post_data: PostCreate) -> Post:
             status_code=400,
             detail=f"Lỗi khi tạo post: {str(e)}"
         )
-
+def search_posts_by_topic_name(db: Session, topic_name: str, skip: int = 0, limit: int = 100):
+    """
+    Search posts by topic name using case-insensitive partial match
+    """
+    return db.query(Post)\
+        .join(Post.topics)\
+        .filter(Topic.name.ilike(f"%{topic_name}%"))\
+        .offset(skip)\
+        .limit(limit)\
+        .all()
 
 def get_post_by_id(db: Session, post_id: UUID) -> Post:
     post = db.query(Post).filter(Post.post_id == post_id).first()

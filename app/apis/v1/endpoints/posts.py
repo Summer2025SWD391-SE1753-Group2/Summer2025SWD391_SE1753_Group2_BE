@@ -7,7 +7,7 @@ from app.core.deps import get_db
 from app.schemas.post import PostCreate, PostUpdate, PostOut
 from app.services.post_service import (
     create_post, get_post_by_id, get_all_posts, update_post, delete_post,search_posts
-,search_posts_by_tag_name)
+,search_posts_by_tag_name,search_posts_by_topic_name)
 from app.schemas.account import RoleNameEnum
 from app.apis.v1.endpoints.check_role import check_roles
 router = APIRouter()
@@ -56,7 +56,17 @@ def get_all_posts_endpoint(skip: int = 0, limit: int = 100, db: Session = Depend
 @router.put("/{post_id}", response_model=PostOut)
 def update_post_endpoint(post_id: UUID, post_data: PostUpdate, db: Session = Depends(get_db)):
     return update_post(db, post_id, post_data)
-
+@router.get("/search/by-topic/", response_model=List[PostOut])
+def search_posts_by_topic_endpoint(
+    topic_name: str,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """
+    Search posts by topic name
+    """
+    return search_posts_by_topic_name(db, topic_name, skip=skip, limit=limit)
 
 @router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post_endpoint(post_id: UUID, db: Session = Depends(get_db)):
