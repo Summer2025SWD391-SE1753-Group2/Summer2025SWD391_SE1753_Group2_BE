@@ -7,8 +7,17 @@ from app.db.models.tag import Tag
 from app.db.models.material import Material
 from app.db.models.topic import Topic
 from app.schemas.post import PostCreate, PostUpdate
+from sqlalchemy import or_
 
-
+def search_posts(db: Session, title: str, skip: int = 0, limit: int = 100):
+    """
+    Search posts by title using case-insensitive partial match
+    """
+    return db.query(Post)\
+        .filter(Post.title.ilike(f"%{title}%"))\
+        .offset(skip)\
+        .limit(limit)\
+        .all()
 async def create_post(db: Session, post_data: PostCreate) -> Post:
     try:
         post = Post(
