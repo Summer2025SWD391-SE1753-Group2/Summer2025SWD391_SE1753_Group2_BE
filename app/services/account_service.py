@@ -55,8 +55,8 @@ def search_accounts_by_name(
     """
     return db.query(Account)\
         .filter(
-            (Account.username.ilike(f"%{name}%")) |
-            (Account.full_name.ilike(f"%{name}%"))
+            (Account.username.ilike(f"%{name}%"))
+           
         )\
         .filter(Account.status == AccountStatusEnum.active)\
         .offset(skip)\
