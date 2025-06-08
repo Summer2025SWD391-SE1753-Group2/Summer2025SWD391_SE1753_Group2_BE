@@ -7,7 +7,7 @@ from app.core.deps import get_db
 from app.schemas.post import PostCreate, PostUpdate, PostOut
 from app.services.post_service import (
     create_post, get_post_by_id, get_all_posts, update_post, delete_post,search_posts
-)
+,search_posts_by_tag_name)
 from app.schemas.account import RoleNameEnum
 from app.apis.v1.endpoints.check_role import check_roles
 router = APIRouter()
@@ -37,7 +37,17 @@ def search_posts_endpoint(
 def get_post_by_id_endpoint(post_id: UUID, db: Session = Depends(get_db)):
     return get_post_by_id(db, post_id)
 
-
+@router.get("/search/by-tag/", response_model=List[PostOut])
+def search_posts_by_tag_endpoint(
+    tag_name: str,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """
+    Search posts by tag name
+    """
+    return search_posts_by_tag_name(db, tag_name, skip=skip, limit=limit)
 @router.get("/", response_model=List[PostOut])
 def get_all_posts_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return get_all_posts(db, skip=skip, limit=limit)

@@ -18,6 +18,7 @@ def search_posts(db: Session, title: str, skip: int = 0, limit: int = 100):
         .offset(skip)\
         .limit(limit)\
         .all()
+
 async def create_post(db: Session, post_data: PostCreate) -> Post:
     try:
         post = Post(
@@ -95,7 +96,16 @@ def get_post_by_id(db: Session, post_id: UUID) -> Post:
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     return post
-
+def search_posts_by_tag_name(db: Session, tag_name: str, skip: int = 0, limit: int = 100):
+    """
+    Search posts by tag name using case-insensitive partial match
+    """
+    return db.query(Post)\
+        .join(Post.tags)\
+        .filter(Tag.name.ilike(f"%{tag_name}%"))\
+        .offset(skip)\
+        .limit(limit)\
+        .all()
 
 def get_all_posts(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Post).offset(skip).limit(limit).all()
