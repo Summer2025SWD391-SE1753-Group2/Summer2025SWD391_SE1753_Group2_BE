@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
+from typing import List, Optional
 from app.schemas.account import AccountOut, AccountUpdate
-from app.services.account_service import confirm_email, update_account_profile, send_confirmation_email, get_account_profile
+from app.services.account_service import search_accounts_by_name,confirm_email, update_account_profile, send_confirmation_email, get_account_profile
 from app.core.deps import get_db, get_current_active_account_l1
 from app.db.models.account import Account, AccountStatusEnum
 
@@ -52,7 +53,18 @@ async def confirm_email_post(token: str = Query(...), db: Session = Depends(get_
             status_code=400,
             detail=f"Failed to confirm email: {str(e)}"
         )
-
+@router.get("/search/", response_model=List[AccountOut])
+def search_accounts_endpoint(
+    name: str,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: Account = Depends(get_current_active_account_l1)
+):
+    """
+    Search accounts by username or full name
+    """
+    return search_accounts_by_name(db, name, skip=skip, limit=limit)
 @router.post("/resend-confirmation")
 async def resend_confirmation_email(username: str, db: Session = Depends(get_db)):
     """

@@ -4,6 +4,7 @@ from app.schemas.account import AccountCreate, AccountUpdate
 from app.core.security import get_password_hash
 from fastapi import HTTPException
 from sqlalchemy import text
+from typing import List, Optional
 from sqlalchemy.exc import IntegrityError
 from app.services.email_service import send_confirmation_email, send_email_verification
 from jose import jwt, JWTError
@@ -43,7 +44,24 @@ def check_unique_fields(db: Session, username: str = None, email: str = None, ph
                 status_code=400,
                 detail="Phone number already exists"
             )
-
+def search_accounts_by_name(
+    db: Session, 
+    name: str, 
+    skip: int = 0, 
+    limit: int = 100
+) -> List[Account]:
+    """
+    Search accounts by username or full_name using case-insensitive partial match
+    """
+    return db.query(Account)\
+        .filter(
+            (Account.username.ilike(f"%{name}%"))
+           
+        )\
+        .filter(Account.status == AccountStatusEnum.active)\
+        .offset(skip)\
+        .limit(limit)\
+        .all()
 async def create_account(db: Session, account: AccountCreate) -> Account:
     try:
         # Check unique constraints before creating
