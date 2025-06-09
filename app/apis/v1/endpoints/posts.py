@@ -16,7 +16,7 @@ def create_post_endpoint(
     post_data: PostCreate,
     db: Session = Depends(get_db),
     current_user: Account = Depends(check_roles([
-        RoleNameEnum.user_l2,
+        RoleNameEnum.user,
         RoleNameEnum.moderator,
         RoleNameEnum.admin
     ]))

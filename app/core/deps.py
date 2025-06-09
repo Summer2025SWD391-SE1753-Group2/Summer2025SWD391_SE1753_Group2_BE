@@ -59,27 +59,12 @@ def get_current_account(
     return account
 
 
-# 3. Yêu cầu account đã đăng nhập & là L1
-def get_current_active_account_l1(current_account: Account = Depends(get_current_account)):
-    if current_account.role.role_name not in [RoleNameEnum.user_l1, RoleNameEnum.user_l2, RoleNameEnum.moderator, RoleNameEnum.admin]:
+# 3. Yêu cầu account đã đăng nhập (User, Moderator, Admin)
+def get_current_active_account(current_account: Account = Depends(get_current_account)):
+    if current_account.role.role_name not in [RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Requires Level 1 account or above"
-        )
-    return current_account
-
-
-# 4. Yêu cầu L2
-def get_current_active_account_l2(current_account: Account = Depends(get_current_account)):
-    if current_account.role.role_name not in [RoleNameEnum.user_l2, RoleNameEnum.moderator, RoleNameEnum.admin]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Requires Level 2 account or above"
-        )
-    if not current_account.phone_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Phone number must be verified to access Level 2 features"
+            detail="Requires User account or above"
         )
     return current_account
 
