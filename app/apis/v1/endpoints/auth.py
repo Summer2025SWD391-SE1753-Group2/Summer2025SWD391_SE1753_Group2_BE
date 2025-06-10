@@ -489,7 +489,6 @@ async def google_callback_exchange(
             status_code=400,
             detail="Authorization code is required in the request body."
         )
-
     try:
         google_token = await get_google_token(code)
         google_user = await get_google_user_info(google_token.access_token)
