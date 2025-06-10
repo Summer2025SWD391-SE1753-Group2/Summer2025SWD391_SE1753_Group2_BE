@@ -34,7 +34,17 @@ def read_unit(
     db: Session = Depends(get_db)
 ) -> UnitOut:
     return unit_service.get_unit_by_id(db, unit_id)
-
+@router.get("/search/", response_model=List[UnitOut])
+def search_units(
+    name: str,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+) -> List[UnitOut]:
+    """
+    Search units by name
+    """
+    return unit_service.search_units_by_name(db, name, skip, limit)
 @router.put("/{unit_id}", response_model=UnitOut)
 def update_unit(
     unit_id: UUID,

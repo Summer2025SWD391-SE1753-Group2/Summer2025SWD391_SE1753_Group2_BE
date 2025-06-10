@@ -6,7 +6,7 @@ from uuid import UUID
 from datetime import datetime, timezone
 from app.db.models.unit import Unit, UnitStatusEnum
 from app.schemas.unit import UnitCreate, UnitUpdate
-
+from typing import List
 def check_unit_name_unique(db: Session, name: str):
     existing_unit = db.execute(
         text("SELECT 1 FROM unit WHERE name = :name"),
@@ -14,7 +14,15 @@ def check_unit_name_unique(db: Session, name: str):
     ).first()
     if existing_unit:
         raise HTTPException(status_code=400, detail="Unit name already exists")
-
+def search_units_by_name(db: Session, name: str, skip: int = 0, limit: int = 100) -> List[Unit]:
+    """
+    Search units by name using partial match (case-insensitive)
+    """
+    return db.query(Unit)\
+        .filter(Unit.name.ilike(f"%{name}%"))\
+        .offset(skip)\
+        .limit(limit)\
+        .all()
 def create_unit(db: Session, unit_data: UnitCreate, created_by: UUID) -> Unit:
     try:
         check_unit_name_unique(db, name=unit_data.name)
