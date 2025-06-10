@@ -1,22 +1,23 @@
-from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Text, Boolean, DateTime, Date
+from datetime import datetime, timezone
+import enum
+import uuid
+from sqlalchemy import Column, String, Enum, ForeignKey, Text, DateTime
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
-from datetime import datetime, timezone
 from .post_tag import post_tag
-from .post_material import post_material
 from .post_topic import post_topic
+from app.db.models.post_material import PostMaterial
 from app.db.models.material import Material
 from app.db.models.topic import Topic
 from app.db.models.postImage import PostImage
 from app.db.models.tag import Tag
-import enum
 
 class PostStatusEnum(str, enum.Enum):
     waiting = "waiting"
     approved = "approved"
     rejected = "rejected"
-import uuid                         
-from sqlalchemy.dialects.postgresql import UUID
+
 class Post(Base):
     __tablename__ = "post"
 
@@ -32,12 +33,12 @@ class Post(Base):
     created_by = Column(UUID(as_uuid=True), ForeignKey("account.account_id"), nullable=True)
     updated_by = Column(UUID(as_uuid=True), ForeignKey("account.account_id"), nullable=True)
 
-    # Quan hệ many-to-many
+    # Relationships
     tags = relationship(Tag, secondary=post_tag, back_populates="posts")
-    materials = relationship("Material", secondary=post_material, back_populates="posts")
     topics = relationship("Topic", secondary=post_topic, back_populates="posts")
     images = relationship("PostImage", back_populates="post", cascade="all, delete-orphan")
-
-    # Quan hệ one-to-many ngược với Account
+    post_materials = relationship("PostMaterial", back_populates="post", cascade="all, delete-orphan")
+    
+    # Account relationships
     creator = relationship("Account", back_populates="posts_created", foreign_keys=[created_by])
     updater = relationship("Account", back_populates="posts_updated", foreign_keys=[updated_by])

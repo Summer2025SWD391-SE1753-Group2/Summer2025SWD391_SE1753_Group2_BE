@@ -6,6 +6,7 @@ from app.db.models.post import PostStatusEnum
 from app.schemas.tag import TagOut
 from app.schemas.material import MaterialOut
 from app.schemas.topic import TopicOut
+from app.schemas.post_material import PostMaterialCreate, PostMaterialOut
 
 class PostImageCreate(BaseModel):
     image_url: str
@@ -26,18 +27,17 @@ class PostBase(BaseModel):
 
 class PostCreate(PostBase):
     tag_ids: List[UUID] = []
-    material_ids: List[UUID] = []
+    materials: List[PostMaterialCreate] = []  # Changed from material_ids
     topic_ids: List[UUID] = []
     images: List[str] = []  # Chỉ cần truyền list các URL
     created_by: Optional[UUID] = None
 
 class PostUpdate(PostBase):
     tag_ids: Optional[List[UUID]] = None
-    material_ids: Optional[List[UUID]] = None
+    materials: Optional[List[PostMaterialCreate]] = None  # Changed from material_ids
     topic_ids: Optional[List[UUID]] = None
-    images: Optional[List[str]] = None  # Chỉ cần truyền list các URL
+    images: Optional[List[str]] = None
     updated_by: Optional[UUID] = None
-
 class PostOut(PostBase):
     post_id: UUID
     created_at: datetime
@@ -46,7 +46,7 @@ class PostOut(PostBase):
     updated_by: Optional[UUID]
     approved_by: Optional[UUID]
     tags: List[TagOut] = []
-    materials: List[MaterialOut] = []
+    materials: List[PostMaterialOut] = []
     topics: List[TopicOut] = []
     images: List[PostImageOut] = []
 
