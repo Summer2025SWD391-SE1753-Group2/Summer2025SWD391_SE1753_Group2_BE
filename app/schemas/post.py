@@ -1,13 +1,15 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 from uuid import UUID
+from typing import Dict, Any
 from datetime import datetime
 from app.db.models.post import PostStatusEnum
 from app.schemas.tag import TagOut
 from app.schemas.material import MaterialOut
 from app.schemas.topic import TopicOut
 from app.schemas.post_material import PostMaterialCreate, PostMaterialOut
-
+import logging
+logger = logging.getLogger(__name__)
 class PostImageCreate(BaseModel):
     image_url: str
 
@@ -18,6 +20,10 @@ class PostImageOut(PostImageCreate):
 
     class Config:
         from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat(),
+            UUID: lambda v: str(v)
+        }
 
 class PostBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=300)
@@ -38,17 +44,74 @@ class PostUpdate(PostBase):
     topic_ids: Optional[List[UUID]] = None
     images: Optional[List[str]] = None
     updated_by: Optional[UUID] = None
-class PostOut(PostBase):
+class PostOut(BaseModel):
     post_id: UUID
+    title: str
+    content: str
+    status: PostStatusEnum
+    rejection_reason: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     created_by: UUID
     updated_by: Optional[UUID]
     approved_by: Optional[UUID]
-    tags: List[TagOut] = []
-    materials: List[PostMaterialOut] = []
-    topics: List[TopicOut] = []
-    images: List[PostImageOut] = []
+    tags: List[TagOut] = Field(default_factory=list)
+    materials: List[Dict[str, Any]] = Field(default_factory=list)
+    topics: List[TopicOut] = Field(default_factory=list)
+    images: List[PostImageOut] = Field(default_factory=list)
+
+    @classmethod
+    def from_orm(cls, db_obj):
+        logger.info(f"Converting post {db_obj.post_id} to PostOut")
+        
+        # Convert tags to TagOut
+        tags = [TagOut.from_orm(tag) for tag in db_obj.tags]
+        logger.info(f"Converted {len(tags)} tags")
+
+        # Convert topics to TopicOut
+        topics = [TopicOut.from_orm(topic) for topic in db_obj.topics]
+        logger.info(f"Converted {len(topics)} topics")
+
+        # Convert images to PostImageOut
+        images = [PostImageOut.from_orm(image) for image in db_obj.images]
+        logger.info(f"Converted {len(images)} images")
+
+        # Convert materials
+        materials = []
+        for pm in db_obj.post_materials:
+            if pm.material:
+                material_dict = {
+                    "material_id": str(pm.material.material_id),
+                    "material_name": pm.material.name,
+                    "unit": pm.material.unit,
+                    "quantity": float(pm.quantity)
+                }
+                materials.append(material_dict)
+        logger.info(f"Converted {len(materials)} materials")
+
+        # Create dict with all fields
+        obj_dict = {
+            "post_id": db_obj.post_id,
+            "title": db_obj.title,
+            "content": db_obj.content,
+            "status": db_obj.status,
+            "rejection_reason": db_obj.rejection_reason,
+            "created_at": db_obj.created_at,
+            "updated_at": db_obj.updated_at,
+            "created_by": db_obj.created_by,
+            "updated_by": db_obj.updated_by,
+            "approved_by": db_obj.approved_by,
+            "tags": tags,
+            "topics": topics,
+            "images": images,
+            "materials": materials
+        }
+
+        return cls(**obj_dict)
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat(),
+            UUID: lambda v: str(v)
+        }
