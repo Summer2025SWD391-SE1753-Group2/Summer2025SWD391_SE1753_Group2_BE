@@ -19,7 +19,7 @@ def search_posts(db: Session, title: str, skip: int = 0, limit: int = 100):
         .limit(limit)\
         .all()
 
-async def create_post(db: Session, post_data: PostCreate) -> Post:
+def create_post(db: Session, post_data: PostCreate) -> Post:
     try:
         post = Post(
             title=post_data.title,
