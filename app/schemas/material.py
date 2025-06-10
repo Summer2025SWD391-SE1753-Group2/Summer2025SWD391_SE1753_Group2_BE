@@ -15,6 +15,8 @@ class MaterialBase(BaseModel):
     name: str = Field(..., max_length=150)
     status: MaterialStatusEnum = MaterialStatusEnum.active
     image_url: Optional[str] = Field(None, max_length=500)
+    unit: str  # Add unit field
+
 
 
 # Schema cho việc tạo mới
@@ -27,6 +29,7 @@ class MaterialUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=150)
     status: Optional[MaterialStatusEnum] = None
     image_url: Optional[str] = Field(None, max_length=500)
+    unit: Optional[str] = None 
 
 
 # Schema khi trả về dữ liệu

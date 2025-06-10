@@ -17,6 +17,7 @@ class Material(Base):
     name = Column(String(150), unique=True, nullable=False)
     status = Column(SQLEnum(MaterialStatusEnum), default=MaterialStatusEnum.active)
     image_url = Column(String(500), nullable=True)
+    unit = Column(String(50), ForeignKey("unit.name"), nullable=False)  # Add this line
     
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
@@ -25,4 +26,4 @@ class Material(Base):
     updated_by = Column(UUID(as_uuid=True), ForeignKey("account.account_id"), nullable=True)
 
     # Quan hệ many-to-many với Post
-    posts = relationship("Post", secondary="post_material", back_populates="materials")
+    post_materials = relationship("PostMaterial", back_populates="material", cascade="all, delete-orphan")
