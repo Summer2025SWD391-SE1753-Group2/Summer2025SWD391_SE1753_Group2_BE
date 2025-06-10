@@ -31,4 +31,8 @@ class TopicOut(BaseModel):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat(),
+            UUID: lambda v: str(v)
+        }

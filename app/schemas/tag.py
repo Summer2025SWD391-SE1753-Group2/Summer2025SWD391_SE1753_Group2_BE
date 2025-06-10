@@ -38,4 +38,8 @@ class TagOut(TagBase):
     updated_by: Optional[UUID]
 
     class Config:
-        orm_mode = True
+        from_attributes = True  # Add this line
+        json_encoders = {
+            datetime: lambda v: v.isoformat(),
+            UUID: lambda v: str(v)
+        }
