@@ -11,7 +11,12 @@ from jose import jwt, JWTError
 from app.core.settings import settings
 from datetime import datetime
 
-def check_unique_fields(db: Session, username: str = None, email: str = None, phone_number: str = None):
+
+def check_unique_fields(db: Session, username: Optional[str] = None, email: Optional[str] = None, phone_number: Optional[str] = None):
+    """
+    Checks if username, email, or phone number already exist in the database.
+    Raises HTTPException if a duplicate is found.
+    """
     if username:
         existing_username = db.execute(
             text("SELECT 1 FROM account WHERE username = :username"),
@@ -33,7 +38,7 @@ def check_unique_fields(db: Session, username: str = None, email: str = None, ph
                 status_code=400,
                 detail="Email already exists"
             )
-            
+
     if phone_number:
         existing_phone = db.execute(
             text("SELECT 1 FROM account WHERE phone_number = :phone_number"),
@@ -44,31 +49,40 @@ def check_unique_fields(db: Session, username: str = None, email: str = None, ph
                 status_code=400,
                 detail="Phone number already exists"
             )
+
+
 def search_accounts_by_name(
-    db: Session, 
-    name: str, 
-    skip: int = 0, 
+    db: Session,
+    name: str,
+    skip: int = 0,
     limit: int = 100
 ) -> List[Account]:
     """
-    Search accounts by username or full_name using case-insensitive partial match
+    Searches for accounts by username using a case-insensitive partial match.
+    Only active accounts are returned.
     """
-    return db.query(Account)\
+    return db.query(Account) \
         .filter(
             (Account.username.ilike(f"%{name}%"))
-           
-        )\
-        .filter(Account.status == AccountStatusEnum.active)\
-        .offset(skip)\
-        .limit(limit)\
+        ) \
+        .filter(Account.status == AccountStatusEnum.active) \
+        .offset(skip) \
+        .limit(limit) \
         .all()
+
+
 async def create_account(db: Session, account: AccountCreate) -> Account:
+    """
+    Creates a new account in the database.
+    Performs unique field checks, hashes the password, sets initial status,
+    and sends a confirmation email.
+    """
     try:
         # Check unique constraints before creating
         check_unique_fields(db, username=account.username, email=account.email)
-        
+
         hashed_password = get_password_hash(account.password)
-        
+
         db_account = Account(
             username=account.username,
             email=account.email,
@@ -77,7 +91,7 @@ async def create_account(db: Session, account: AccountCreate) -> Account:
             date_of_birth=account.date_of_birth,
             phone_number=None,
             phone_verified=False,  # Always set to False initially
-            role_id=1,  # Always set to user_l1 initially
+            role_id=1,  # Always set to user initially
             status=AccountStatusEnum.inactive,  # Default status: inactive
             avatar="https://img.freepik.com/premium-vector/person-with-blue-shirt-that-says-name-person_1029948-7040.jpg",
             bio="Welcome to my profile!",
@@ -99,7 +113,7 @@ async def create_account(db: Session, account: AccountCreate) -> Account:
 
         # Send confirmation email
         await send_confirmation_email(db_account.email, db_account.username)
-        
+
         return db_account
 
     except IntegrityError as e:
@@ -116,7 +130,12 @@ async def create_account(db: Session, account: AccountCreate) -> Account:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
+
 async def confirm_email(db: Session, token: str) -> Account:
+    """
+    Confirms a user's email address using a JWT token.
+    Activates the account and sets email_verified to True upon successful confirmation.
+    """
     try:
         # Verify token
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
@@ -126,7 +145,7 @@ async def confirm_email(db: Session, token: str) -> Account:
                 status_code=400,
                 detail="Invalid token"
             )
-        
+
         # Get account
         account = db.query(Account).filter(Account.username == username).first()
         if account is None:
@@ -134,13 +153,13 @@ async def confirm_email(db: Session, token: str) -> Account:
                 status_code=404,
                 detail="Account not found"
             )
-        
+
         # Update status and email_verified
         account.status = AccountStatusEnum.active
         account.email_verified = True
         db.commit()
         db.refresh(account)
-        
+
         return account
     except JWTError:
         raise HTTPException(
@@ -148,7 +167,13 @@ async def confirm_email(db: Session, token: str) -> Account:
             detail="Invalid or expired token"
         )
 
+
 async def update_account_profile(db: Session, account: Account, profile_update: AccountUpdate) -> Account:
+    """
+    Updates an existing account's profile information.
+    Handles email and phone number updates, including sending verification emails
+    and setting verification status to False if changed.
+    """
     try:
         # If email is being updated, send verification email
         if profile_update.email and profile_update.email != account.email:
@@ -166,6 +191,7 @@ async def update_account_profile(db: Session, account: Account, profile_update: 
             await send_email_verification(account.email, account.username, profile_update.email)
             # Set email_verified to False until verified
             account.email_verified = False
+            account.email = profile_update.email # Update email in account object
 
         # If phone number is being updated, set phone_verified to False
         if profile_update.phone and profile_update.phone != account.phone_number:
@@ -188,6 +214,8 @@ async def update_account_profile(db: Session, account: Account, profile_update: 
         if profile_update.date_of_birth is not None:
             account.date_of_birth = profile_update.date_of_birth
 
+        account.updated_at = datetime.now() # Update the updated_at timestamp
+
         db.commit()
         db.refresh(account)
         return account
@@ -196,9 +224,11 @@ async def update_account_profile(db: Session, account: Account, profile_update: 
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
+
 async def get_account_profile(db: Session, username: str) -> Account:
     """
-    Get account profile by username
+    Retrieves an account's profile by username.
+    Raises HTTPException if the account is not found or is not active.
     """
     account = db.query(Account).filter(Account.username == username).first()
     if not account:
@@ -206,11 +236,11 @@ async def get_account_profile(db: Session, username: str) -> Account:
             status_code=404,
             detail="Account not found"
         )
-    
+
     if account.status != AccountStatusEnum.active:
         raise HTTPException(
             status_code=400,
             detail="Account is not active"
         )
-    
+
     return account

@@ -6,8 +6,7 @@ import enum
 from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 class RoleNameEnum(str, enum.Enum):
-    user_l1 = "user_l1"
-    user_l2 = "user_l2"
+    user = "user"
     moderator = "moderator"
     admin = "admin"
 

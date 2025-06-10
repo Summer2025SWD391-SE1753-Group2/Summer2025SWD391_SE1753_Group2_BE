@@ -3,55 +3,155 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Email Confirmation</title>
+    <title>Xác nhận Email của bạn - {{ project_name }}</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             line-height: 1.6;
             color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
+            background-color: #f4f4f4;
+            /* Màu nền nhẹ cho toàn bộ email */
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
         }
 
-        .container {
-            background-color: #f9f9f9;
-            border-radius: 5px;
-            padding: 20px;
-            margin: 20px 0;
+        .email-wrapper {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            /* Bóng đổ nhẹ */
+            overflow: hidden;
+            /* Đảm bảo góc bo tròn */
+        }
+
+        .header {
+            background-color: #4CAF50;
+            /* Màu xanh lá cây đậm cho header */
+            color: white;
+            padding: 30px 25px;
+            text-align: center;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .content {
+            padding: 25px;
+        }
+
+        .content p {
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
         }
 
         .button {
             display: inline-block;
-            padding: 12px 24px;
+            padding: 14px 28px;
             background-color: #4CAF50;
-            color: white;
+            /* Màu xanh lá cây cho nút */
+            color: white !important;
+            /* !important để đảm bảo màu chữ */
             text-decoration: none;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            /* Hiệu ứng chuyển màu khi hover */
+        }
+
+        .button:hover {
+            background-color: #45a049;
+            /* Màu xanh lá cây đậm hơn khi hover */
+        }
+
+        .link-text {
+            word-break: break-all;
+            /* Ngắt từ để tránh tràn */
+            background-color: #f0f0f0;
+            padding: 10px 15px;
             border-radius: 4px;
-            margin: 20px 0;
+            font-size: 14px;
+            color: #555;
+            display: block;
+            /* Để nó chiếm toàn bộ chiều rộng */
         }
 
         .footer {
-            font-size: 12px;
-            color: #666;
-            margin-top: 20px;
+            background-color: #f9f9f9;
+            padding: 20px 25px;
+            text-align: center;
+            font-size: 13px;
+            color: #777;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            border-top: 1px solid #eee;
+            /* Đường kẻ phân cách */
+        }
+
+        .footer p {
+            margin: 0;
+        }
+
+        /* Responsive adjustments */
+        @media only screen and (max-width: 620px) {
+            .email-wrapper {
+                margin: 0 !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+            }
+
+            .header,
+            .content,
+            .footer {
+                padding: 20px !important;
+            }
+
+            .header h1 {
+                font-size: 24px !important;
+            }
+
+            .button {
+                padding: 12px 20px !important;
+                font-size: 16px !important;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <h1>Welcome to {{ project_name }}!</h1>
-        <p>Hi {{ username }},</p>
-        <p>Thank you for registering. Please confirm your email address by clicking the button below:</p>
-        <a href="{{ confirmation_link }}" class="button">Confirm Email</a>
-        <p>Or copy and paste this link into your browser:</p>
-        <p>{{ confirmation_link }}</p>
-        <p>This link will expire in {{ expire_hours }} hours.</p>
-        <p>If you did not create an account, please ignore this email.</p>
-    </div>
-    <div class="footer">
-        <p>This is an automated message, please do not reply to this email.</p>
+    <div class="email-wrapper">
+        <div class="header">
+            <h1>Chào mừng bạn đến với {{ project_name }}!</h1>
+        </div>
+        <div class="content">
+            <p>Chào {{ username }},</p>
+            <p>Cảm ơn bạn đã đăng ký. Vui lòng xác nhận địa chỉ email của bạn bằng cách nhấp vào nút bên dưới:</p>
+            <div class="button-container">
+                <a href="{{ confirmation_link }}" class="button">Xác nhận Email của bạn</a>
+            </div>
+            <p>Hoặc sao chép và dán liên kết này vào trình duyệt của bạn:</p>
+            <p><span class="link-text">{{ confirmation_link }}</span></p>
+            <p>Liên kết này sẽ hết hạn sau {{ expire_hours }} giờ.</p>
+            <p>Nếu bạn không tạo tài khoản, vui lòng bỏ qua email này.</p>
+        </div>
+        <div class="footer">
+            <p>Đây là một tin nhắn tự động, vui lòng không trả lời email này.</p>
+            <p>&copy; 2025 {{ project_name }}. Tất cả các quyền được bảo lưu.</p>
+        </div>
     </div>
 </body>
 
