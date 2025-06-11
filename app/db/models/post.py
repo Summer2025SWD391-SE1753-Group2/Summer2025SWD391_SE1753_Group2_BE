@@ -12,6 +12,7 @@ from app.db.models.material import Material
 from app.db.models.topic import Topic
 from app.db.models.postImage import PostImage
 from app.db.models.tag import Tag
+from app.db.models.step import Step 
 
 class PostStatusEnum(str, enum.Enum):
     waiting = "waiting"
@@ -35,6 +36,7 @@ class Post(Base):
 
     # Relationships
     tags = relationship(Tag, secondary=post_tag, back_populates="posts")
+    steps = relationship("Step", back_populates="post", cascade="all, delete-orphan",order_by="Step.order_number")
     topics = relationship("Topic", secondary=post_topic, back_populates="posts")
     images = relationship("PostImage", back_populates="post", cascade="all, delete-orphan")
     post_materials = relationship("PostMaterial", back_populates="post", cascade="all, delete-orphan")
