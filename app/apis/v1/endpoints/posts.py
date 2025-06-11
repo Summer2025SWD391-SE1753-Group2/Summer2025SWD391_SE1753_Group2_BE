@@ -8,7 +8,7 @@ from app.schemas.post import PostCreate, PostUpdate, PostOut
 from app.services.post_service import (
     create_post, get_post_by_id, get_all_posts, 
     update_post, delete_post, search_posts,
-    search_posts_by_tag_name, search_posts_by_topic_name
+    search_posts_by_tag_name, search_posts_by_topic_name,get_my_posts
 )
 from app.schemas.account import RoleNameEnum
 from app.apis.v1.endpoints.check_role import check_roles
@@ -54,7 +54,15 @@ def search_posts_by_topic_endpoint(
 ):
     """Search posts by topic name"""
     return search_posts_by_topic_name(db, topic_name, skip=skip, limit=limit)
-
+@router.get("/my-posts/", response_model=List[PostOut])
+def get_my_posts_endpoint(
+    skip: int = Query(0, ge=0, description="Number of posts to skip"),
+    limit: int = Query(10, ge=1, le=100, description="Number of posts to return"),
+    db: Session = Depends(get_db),
+    current_user: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
+):
+    """Get all posts created by the current user"""
+    return get_my_posts(db, current_user.account_id, skip=skip, limit=limit)
 @router.get("/{post_id}", response_model=PostOut)
 def get_post_by_id_endpoint(
     post_id: UUID,

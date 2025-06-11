@@ -155,26 +155,54 @@ def get_all_posts(db: Session, skip: int = 0, limit: int = 100):
         logger.error(f"Error in get_all_posts: {str(e)}", exc_info=True)
         raise
 
-def get_post_by_id(db: Session, post_id: UUID) -> Post:
-    """
-    Get a post by ID with all relationships loaded
-    """
-    post = db.query(Post)\
-        .options(
-            joinedload(Post.tags),
-            joinedload(Post.topics),
-            joinedload(Post.images),
-            joinedload(Post.post_materials).joinedload(PostMaterial.material)
-        )\
-        .filter(Post.post_id == post_id)\
-        .first()
-        
-    if not post:
-        raise HTTPException(
-            status_code=404,
-            detail="Post not found"
-        )
-    return post
+def get_post_by_id(db: Session, post_id: UUID) -> PostOut:
+    """Get a post by ID with all relationships loaded"""
+    try:
+        post = db.query(Post)\
+            .options(
+                joinedload(Post.tags),
+                joinedload(Post.topics),
+                joinedload(Post.images),
+                joinedload(Post.post_materials).joinedload(PostMaterial.material)
+            )\
+            .filter(Post.post_id == post_id)\
+            .first()
+            
+        if not post:
+            raise HTTPException(
+                status_code=404, 
+                detail="Post not found"
+            )
+
+        return PostOut.from_orm(post)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in get_post_by_id: {str(e)}", exc_info=True)
+        raise
+def get_my_posts(db: Session, user_id: UUID, skip: int = 0, limit: int = 100) -> list[PostOut]:
+    """Get all posts created by a specific user with eager loading of relationships"""
+    try:
+        posts = db.query(Post)\
+            .options(
+                joinedload(Post.tags),
+                joinedload(Post.topics),
+                joinedload(Post.images),
+                joinedload(Post.post_materials).joinedload(PostMaterial.material)
+            )\
+            .filter(Post.created_by == user_id)\
+            .order_by(Post.created_at.desc())\
+            .offset(skip)\
+            .limit(limit)\
+            .all()
+
+        # Convert to Pydantic models explicitly
+        return [PostOut.from_orm(post) for post in posts]
+
+    except Exception as e:
+        logger.error(f"Error in get_my_posts: {str(e)}", exc_info=True)
+        raise
 def update_post(db: Session, post_id: UUID, post_data: PostUpdate) -> Post:
     post = get_post_by_id(db, post_id)
 
