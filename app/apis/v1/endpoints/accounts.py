@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.schemas.account import AccountOut, AccountUpdate
-from app.services.account_service import search_accounts_by_name,confirm_email, update_account_profile, send_confirmation_email, get_account_profile
+from app.schemas.account import AccountOut, AccountUpdate, AccountCreate, RoleNameEnum
+from app.services.account_service import search_accounts_by_name, confirm_email, update_account_profile, send_confirmation_email, get_account_profile
 from app.core.deps import get_db, get_current_active_account
 from app.db.models.account import Account, AccountStatusEnum
+from app.apis.v1.endpoints.check_role import check_roles
 
 router = APIRouter()
 
@@ -53,6 +54,7 @@ async def confirm_email_post(token: str = Query(...), db: Session = Depends(get_
             status_code=400,
             detail=f"Failed to confirm email: {str(e)}"
         )
+
 @router.get("/search/", response_model=List[AccountOut])
 def search_accounts_endpoint(
     name: str,
@@ -85,25 +87,100 @@ async def resend_confirmation_email(username: str, db: Session = Depends(get_db)
     await send_confirmation_email(account.email, account.username)
     return {"message": "Confirmation email sent"}
 
-@router.put("/me", response_model=AccountOut)
-async def update_profile(
-    profile_update: AccountUpdate,
-    db: Session = Depends(get_db),
-    current_account: Account = Depends(get_current_active_account)
+@router.post("/", response_model=AccountOut)
+def create_account(
+    account: AccountCreate,
+    db: Session = Depends(get_db)
 ):
     """
-    Update current account profile
+    Create a new user account
     """
-    return await update_account_profile(db, current_account, profile_update)
+    return account_service.create_account(db=db, account=account)
+
+@router.post("/moderator", response_model=AccountOut)
+def create_moderator(
+    account: AccountCreate,
+    db: Session = Depends(get_db),
+    current_account: Account = Depends(check_roles([RoleNameEnum.admin]))
+):
+    """
+    Create a new moderator account
+    Only admin can create moderator accounts
+    """
+    # Set role to moderator
+    account.role_name = RoleNameEnum.moderator
+    return account_service.create_account(db=db, account=account)
 
 @router.get("/me", response_model=AccountOut)
-async def view_own_profile(
-    current_account: Account = Depends(get_current_active_account)
+def read_account_me(
+    current_account: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
 ):
     """
-    View own profile
+    Get current account information
     """
     return current_account
+
+@router.put("/me", response_model=AccountOut)
+def update_account_me(
+    account_update: AccountUpdate,
+    db: Session = Depends(get_db),
+    current_account: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
+):
+    """
+    Update current account information
+    """
+    return account_service.update_account(
+        db=db,
+        account_id=current_account.account_id,
+        account_update=account_update
+    )
+
+@router.get("/{account_id}", response_model=AccountOut)
+def read_account(
+    account_id: str,
+    db: Session = Depends(get_db),
+    current_account: Account = Depends(check_roles([RoleNameEnum.moderator, RoleNameEnum.admin]))
+):
+    """
+    Get account by ID
+    Only moderator and admin can view other accounts
+    """
+    db_account = account_service.get_account(db=db, account_id=account_id)
+    if not db_account:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Account not found"
+        )
+    return db_account
+
+@router.put("/{account_id}", response_model=AccountOut)
+def update_account(
+    account_id: str,
+    account_update: AccountUpdate,
+    db: Session = Depends(get_db),
+    current_account: Account = Depends(check_roles([RoleNameEnum.admin]))
+):
+    """
+    Update account information
+    Only admin can update other accounts
+    """
+    return account_service.update_account(
+        db=db,
+        account_id=account_id,
+        account_update=account_update
+    )
+
+@router.delete("/{account_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    account_id: str,
+    db: Session = Depends(get_db),
+    current_account: Account = Depends(check_roles([RoleNameEnum.admin]))
+):
+    """
+    Delete account
+    Only admin can delete accounts
+    """
+    account_service.delete_account(db=db, account_id=account_id)
 
 @router.get("/profiles/{username}", response_model=AccountOut)
 async def view_profile(
