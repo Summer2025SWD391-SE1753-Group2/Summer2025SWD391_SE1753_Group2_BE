@@ -9,6 +9,7 @@ from app.db.models.topic import Topic
 from app.schemas.post import PostCreate, PostUpdate
 from sqlalchemy import or_
 from app.schemas.post import PostOut
+from app.db.models.step import Step
 from app.db.models.unit import Unit
 from app.db.models.post_material import PostMaterial
 from sqlalchemy.orm import Session, joinedload
@@ -26,6 +27,7 @@ def search_posts(db: Session, title: str, skip: int = 0, limit: int = 100):
                 joinedload(Post.tags),
                 joinedload(Post.topics),
                 joinedload(Post.images),
+                joinedload(Post.steps),
                 joinedload(Post.post_materials).joinedload(PostMaterial.material)
             )\
             .filter(Post.title.ilike(f"%{title}%"))\
@@ -40,8 +42,27 @@ def search_posts(db: Session, title: str, skip: int = 0, limit: int = 100):
 
 
 
-def create_post(db: Session, post_data: PostCreate) -> Post:
+def create_post(db: Session, post_data: PostCreate) -> PostOut:
     try:
+        if not post_data.topic_ids:
+            raise HTTPException(
+                status_code=400,
+                detail="At least one topic is required"
+            )
+        if not post_data.materials:
+            raise HTTPException(
+                status_code=400,
+                detail="At least one material is required"
+            )
+        
+        # Validate steps if provided
+        if post_data.steps:
+            order_numbers = [step.order_number for step in post_data.steps]
+            if len(order_numbers) != len(set(order_numbers)):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Duplicate step order numbers are not allowed"
+                )
         post = Post(
             title=post_data.title,
             content=post_data.content,
@@ -75,7 +96,6 @@ def create_post(db: Session, post_data: PostCreate) -> Post:
                     quantity=material_data.quantity
                 )
                 db.add(post_material)
-
         # Handle other relationships (tags, topics, images)
         if post_data.tag_ids:
             tags = db.query(Tag).filter(Tag.tag_id.in_(post_data.tag_ids)).all()
@@ -89,7 +109,14 @@ def create_post(db: Session, post_data: PostCreate) -> Post:
             for image_url in post_data.images:
                 db_image = PostImage(image_url=image_url, post_id=post.post_id)  # Changed from url to image_url
                 db.add(db_image)
-
+        if post_data.steps:
+            for step_data in post_data.steps:
+                step = Step(
+                    post_id=post.post_id,
+                    order_number=step_data.order_number,
+                    content=step_data.content
+                )
+                db.add(step)
         db.commit()
         db.refresh(post)
         return get_post_by_id(db, post.post_id)
@@ -104,6 +131,7 @@ def search_posts_by_topic_name(db: Session, topic_name: str, skip: int = 0, limi
             joinedload(Post.tags),
             joinedload(Post.topics),
             joinedload(Post.images),
+            joinedload(Post.steps),
             joinedload(Post.post_materials).joinedload(PostMaterial.material)
         )\
         .join(Post.topics)\
@@ -120,6 +148,7 @@ def search_posts_by_tag_name(db: Session, tag_name: str, skip: int = 0, limit: i
             joinedload(Post.tags),
             joinedload(Post.topics),
             joinedload(Post.images),
+            joinedload(Post.steps),
             joinedload(Post.post_materials).joinedload(PostMaterial.material)
         )\
         .join(Post.tags)\
@@ -137,6 +166,7 @@ def get_all_posts(db: Session, skip: int = 0, limit: int = 100):
                 joinedload(Post.tags),
                 joinedload(Post.topics),
                 joinedload(Post.images),
+                joinedload(Post.steps),
                 joinedload(Post.post_materials).joinedload(PostMaterial.material)
             )\
             .order_by(Post.created_at.desc())\
@@ -151,10 +181,6 @@ def get_all_posts(db: Session, skip: int = 0, limit: int = 100):
         logger.error(f"Error in get_all_posts: {str(e)}", exc_info=True)
         raise
 
-    except Exception as e:
-        logger.error(f"Error in get_all_posts: {str(e)}", exc_info=True)
-        raise
-
 def get_post_by_id(db: Session, post_id: UUID) -> PostOut:
     """Get a post by ID with all relationships loaded"""
     try:
@@ -163,6 +189,7 @@ def get_post_by_id(db: Session, post_id: UUID) -> PostOut:
                 joinedload(Post.tags),
                 joinedload(Post.topics),
                 joinedload(Post.images),
+                joinedload(Post.steps),
                 joinedload(Post.post_materials).joinedload(PostMaterial.material)
             )\
             .filter(Post.post_id == post_id)\
@@ -189,6 +216,7 @@ def get_my_posts(db: Session, user_id: UUID, skip: int = 0, limit: int = 100) ->
                 joinedload(Post.tags),
                 joinedload(Post.topics),
                 joinedload(Post.images),
+                joinedload(Post.steps),
                 joinedload(Post.post_materials).joinedload(PostMaterial.material)
             )\
             .filter(Post.created_by == user_id)\
@@ -203,17 +231,37 @@ def get_my_posts(db: Session, user_id: UUID, skip: int = 0, limit: int = 100) ->
     except Exception as e:
         logger.error(f"Error in get_my_posts: {str(e)}", exc_info=True)
         raise
-def update_post(db: Session, post_id: UUID, post_data: PostUpdate) -> Post:
+def update_post(db: Session, post_id: UUID, post_data: PostUpdate) ->  PostOut:
     post = get_post_by_id(db, post_id)
 
     try:
+        # Validate required fields if provided
+        if post_data.topic_ids is not None and not post_data.topic_ids:
+            raise HTTPException(
+                status_code=400,
+                detail="At least one topic is required"
+            )
+        if post_data.materials is not None and not post_data.materials:
+            raise HTTPException(
+                status_code=400,
+                detail="At least one material is required"
+            )
+
+        # Validate step order numbers if provided
+        if post_data.steps is not None:
+            order_numbers = [step.order_number for step in post_data.steps]
+            if len(order_numbers) != len(set(order_numbers)):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Duplicate step order numbers are not allowed"
+                )
         # Update basic fields
         post.title = post_data.title
         post.content = post_data.content
         post.status = post_data.status
         post.rejection_reason = post_data.rejection_reason
         post.updated_by = post_data.updated_by
-
+        
         # Update tags
         if post_data.tag_ids is not None:
             tags = db.query(Tag).filter(Tag.tag_id.in_(post_data.tag_ids)).all()
@@ -227,7 +275,19 @@ def update_post(db: Session, post_id: UUID, post_data: PostUpdate) -> Post:
             if len(topics) != len(post_data.topic_ids):
                 raise HTTPException(status_code=400, detail="One or more topic IDs not found")
             post.topics = topics
-
+         # Update steps
+        if post_data.steps is not None:
+            # Remove existing steps
+            db.query(Step).filter(Step.post_id == post_id).delete()
+            
+            # Add new steps
+            for step_data in post_data.steps:
+                step = Step(
+                    post_id=post.post_id,
+                    order_number=step_data.order_number,
+                    content=step_data.content
+                )
+                db.add(step)
         # Update materials
         if post_data.materials is not None:
             # Remove existing materials
@@ -250,7 +310,6 @@ def update_post(db: Session, post_id: UUID, post_data: PostUpdate) -> Post:
                     quantity=material_data.quantity
                 )
                 db.add(post_material)
-
         # Update images
         if post_data.images is not None:
             # Remove existing images

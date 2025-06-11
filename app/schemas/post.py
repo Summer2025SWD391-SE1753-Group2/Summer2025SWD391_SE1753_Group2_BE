@@ -7,6 +7,7 @@ from app.db.models.post import PostStatusEnum
 from app.schemas.tag import TagOut
 from app.schemas.material import MaterialOut
 from app.schemas.topic import TopicOut
+from app.schemas.step import StepCreate, StepOut
 from app.schemas.post_material import PostMaterialCreate, PostMaterialOut
 import logging
 logger = logging.getLogger(__name__)
@@ -33,9 +34,10 @@ class PostBase(BaseModel):
 
 class PostCreate(PostBase):
     tag_ids: List[UUID] = []
-    materials: List[PostMaterialCreate] = []  # Changed from material_ids
-    topic_ids: List[UUID] = []
+    materials: List[PostMaterialCreate] = Field(..., min_items=1)  # Changed from material_ids
+    topic_ids: List[UUID] = Field(..., min_items=1)
     images: List[str] = []  # Chỉ cần truyền list các URL
+    steps: List[StepCreate] = []
     created_by: Optional[UUID] = None
 
 class PostUpdate(PostBase):
@@ -43,6 +45,7 @@ class PostUpdate(PostBase):
     materials: Optional[List[PostMaterialCreate]] = None  # Changed from material_ids
     topic_ids: Optional[List[UUID]] = None
     images: Optional[List[str]] = None
+    steps: Optional[List[StepCreate]] = None
     updated_by: Optional[UUID] = None
 class PostOut(BaseModel):
     post_id: UUID
@@ -56,6 +59,7 @@ class PostOut(BaseModel):
     updated_by: Optional[UUID]
     approved_by: Optional[UUID]
     tags: List[TagOut] = Field(default_factory=list)
+    steps: List[StepOut] = Field(default_factory=list)
     materials: List[Dict[str, Any]] = Field(default_factory=list)
     topics: List[TopicOut] = Field(default_factory=list)
     images: List[PostImageOut] = Field(default_factory=list)
@@ -63,7 +67,7 @@ class PostOut(BaseModel):
     @classmethod
     def from_orm(cls, db_obj):
         logger.info(f"Converting post {db_obj.post_id} to PostOut")
-        
+        steps = [StepOut.from_orm(step) for step in sorted(db_obj.steps, key=lambda x: x.order_number)]
         # Convert tags to TagOut
         tags = [TagOut.from_orm(tag) for tag in db_obj.tags]
         logger.info(f"Converted {len(tags)} tags")
@@ -102,6 +106,7 @@ class PostOut(BaseModel):
             "updated_by": db_obj.updated_by,
             "approved_by": db_obj.approved_by,
             "tags": tags,
+            "steps": steps,
             "topics": topics,
             "images": images,
             "materials": materials
