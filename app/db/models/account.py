@@ -13,10 +13,12 @@ class AccountStatusEnum(str, enum.Enum):
     inactive = "inactive"
 
 class Account(Base):
+    __tablename__ = "account"
+
     account_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     role_id = Column(Integer, ForeignKey("role.role_id"))
-    username = Column(String(100), unique=True, nullable=False)
-    email = Column(String(100), unique=True, nullable=False)
+    username = Column(String(100), unique=True, nullable=False, index=True)
+    email = Column(String(100), unique=True, nullable=False, index=True)
     email_verified = Column(Boolean, default=False)
     password_hash = Column(String(255), nullable=False)
     phone_number = Column(String(20), unique=True, nullable=True)
@@ -48,5 +50,6 @@ class Account(Base):
     )
 
     # Liên kết với Group
-    created_groups = relationship("Group", back_populates="creator", foreign_keys="[Group.created_by]")
-    led_groups = relationship("Group", back_populates="leader", foreign_keys="[Group.group_leader]")
+    created_groups = relationship("Group", foreign_keys="Group.created_by", back_populates="creator")
+    led_groups = relationship("Group", foreign_keys="Group.group_leader", back_populates="leader")
+    group_memberships = relationship("GroupMember", back_populates="account")
