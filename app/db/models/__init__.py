@@ -11,3 +11,17 @@ from app.db.models.postImage import PostImage
 from app.db.models.post_material import PostMaterial
 from app.db.models.post_topic import post_topic
 from app.db.models.post_tag import post_tag
+from app.db.models.group_member import GroupMember
+
+__all__ = [
+    "Account",
+    "Role",
+    "Post",
+    "Tag",
+    "Topic",
+    "Material",
+    "Unit",
+    "Group",
+    "GroupMember",
+    "PostImage"
+]
