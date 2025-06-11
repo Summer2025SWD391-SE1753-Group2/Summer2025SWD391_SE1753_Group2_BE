@@ -46,3 +46,7 @@ class Account(Base):
         back_populates="updater",
         foreign_keys=[Post.updated_by]
     )
+
+    # Liên kết với Group
+    created_groups = relationship("Group", back_populates="creator", foreign_keys="[Group.created_by]")
+    led_groups = relationship("Group", back_populates="leader", foreign_keys="[Group.group_leader]")
