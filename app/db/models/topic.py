@@ -25,3 +25,6 @@ class Topic(Base):
 
     # Quan hệ many-to-many với Post
     posts = relationship("Post", secondary="post_topic", back_populates="topics")
+
+    # Quan hệ one-to-many với Group
+    groups = relationship("Group", back_populates="topic")
