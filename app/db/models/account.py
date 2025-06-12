@@ -56,3 +56,6 @@ class Account(Base):
 
     # Liên kết với Comment
     comments = relationship("Comment", back_populates="account", cascade="all, delete-orphan")
+
+    # Liên kết với Favourite
+    favourites = relationship("Favourite", back_populates="account", cascade="all, delete-orphan")
