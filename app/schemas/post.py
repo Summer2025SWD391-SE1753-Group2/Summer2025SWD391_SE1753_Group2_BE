@@ -36,7 +36,6 @@ class PostImageOut(PostImageCreate):
 class PostBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=300)
     content: str = Field(..., min_length=1)
-    status: Optional[PostStatusEnum] = PostStatusEnum.waiting
     rejection_reason: Optional[str] = None
 
 class PostCreate(PostBase):
