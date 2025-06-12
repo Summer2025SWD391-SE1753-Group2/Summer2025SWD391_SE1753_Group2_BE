@@ -42,6 +42,7 @@ class Post(Base):
     images = relationship("PostImage", back_populates="post", cascade="all, delete-orphan")
     post_materials = relationship("PostMaterial", back_populates="post", cascade="all, delete-orphan")
     comments = relationship(Comment, back_populates="post", cascade="all, delete-orphan")
+    favourites = relationship("Favourite", secondary="favourite_posts", back_populates="posts")
     
     # Account relationships
     creator = relationship("Account", back_populates="posts_created", foreign_keys=[created_by])

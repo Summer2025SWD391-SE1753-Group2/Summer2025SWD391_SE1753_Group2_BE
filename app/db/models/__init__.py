@@ -12,6 +12,8 @@ from app.db.models.post_material import PostMaterial
 from app.db.models.post_topic import post_topic
 from app.db.models.post_tag import post_tag
 from app.db.models.group_member import GroupMember
+from app.db.models.favourite import Favourite
+from app.db.models.favourite_post import favourite_posts
 
 __all__ = [
     "Account",
@@ -23,5 +25,7 @@ __all__ = [
     "Unit",
     "Group",
     "GroupMember",
-    "PostImage"
+    "PostImage",
+    "Favourite",
+    "favourite_posts"
 ]
