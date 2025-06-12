@@ -1,8 +1,9 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
 from typing import List, Optional
 from uuid import UUID
 from typing import Dict, Any
 from datetime import datetime
+from enum import Enum
 from app.db.models.post import PostStatusEnum
 from app.schemas.tag import TagOut
 from app.schemas.material import MaterialOut
@@ -11,6 +12,12 @@ from app.schemas.step import StepCreate, StepOut
 from app.schemas.post_material import PostMaterialCreate, PostMaterialOut
 import logging
 logger = logging.getLogger(__name__)
+
+class PostStatusEnum(str, Enum):
+    waiting = "waiting"
+    approved = "approved"
+    rejected = "rejected"
+
 class PostImageCreate(BaseModel):
     image_url: str
 
@@ -34,19 +41,32 @@ class PostBase(BaseModel):
 
 class PostCreate(PostBase):
     tag_ids: List[UUID] = []
-    materials: List[PostMaterialCreate] = Field(..., min_items=1)  # Changed from material_ids
+    materials: List[PostMaterialCreate] = Field(..., min_items=1)
     topic_ids: List[UUID] = Field(..., min_items=1)
-    images: List[str] = []  # Chỉ cần truyền list các URL
+    images: List[str] = []
     steps: List[StepCreate] = []
     created_by: Optional[UUID] = None
 
 class PostUpdate(PostBase):
     tag_ids: Optional[List[UUID]] = None
-    materials: Optional[List[PostMaterialCreate]] = None  # Changed from material_ids
+    materials: Optional[List[PostMaterialCreate]] = None
     topic_ids: Optional[List[UUID]] = None
     images: Optional[List[str]] = None
     steps: Optional[List[StepCreate]] = None
     updated_by: Optional[UUID] = None
+
+class PostModeration(BaseModel):
+    status: PostStatusEnum
+    rejection_reason: Optional[str] = None
+    approved_by: UUID
+
+    @field_validator('rejection_reason')
+    @classmethod
+    def validate_rejection_reason(cls, v: Optional[str], info: ValidationInfo) -> Optional[str]:
+        if info.data.get('status') == PostStatusEnum.rejected and not v:
+            raise ValueError('Rejection reason is required when status is rejected')
+        return v
+
 class PostOut(BaseModel):
     post_id: UUID
     title: str
