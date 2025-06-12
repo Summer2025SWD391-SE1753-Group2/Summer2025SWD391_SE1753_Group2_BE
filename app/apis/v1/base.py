@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.apis.v1.endpoints import roles, accounts, auth, tags, materials, topics, posts, units, groups, group_members
+from app.apis.v1.endpoints import roles, accounts, auth, tags, materials, topics, posts, units, groups, group_members, comments
 
 
 api_router = APIRouter()
@@ -13,3 +13,4 @@ api_router.include_router(posts.router, prefix="/posts", tags=["Posts"])
 api_router.include_router(units.router, prefix="/units", tags=["Units"])
 api_router.include_router(groups.router, prefix="/groups", tags=["Groups"])
 api_router.include_router(group_members.router, prefix="/group-members", tags=["Group Members"])
+api_router.include_router(comments.router, prefix="/comments", tags=["Comments"])

@@ -53,3 +53,6 @@ class Account(Base):
     created_groups = relationship("Group", foreign_keys="Group.created_by", back_populates="creator")
     led_groups = relationship("Group", foreign_keys="Group.group_leader", back_populates="leader")
     group_memberships = relationship("GroupMember", back_populates="account")
+
+    # Liên kết với Comment
+    comments = relationship("Comment", back_populates="account", cascade="all, delete-orphan")
