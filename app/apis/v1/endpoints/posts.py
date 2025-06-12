@@ -4,11 +4,12 @@ from uuid import UUID
 from typing import List
 from app.db.models.account import Account
 from app.core.deps import get_db
-from app.schemas.post import PostCreate, PostUpdate, PostOut
+from app.schemas.post import PostCreate, PostUpdate, PostOut, PostModeration
 from app.services.post_service import (
-    create_post, get_post_by_id, get_all_posts, 
+    create_post, get_post_by_id, get_all_posts,
     update_post, delete_post, search_posts,
-    search_posts_by_tag_name, search_posts_by_topic_name,get_my_posts
+    search_posts_by_tag_name, search_posts_by_topic_name, get_my_posts,
+    moderate_post
 )
 from app.schemas.account import RoleNameEnum
 from app.apis.v1.endpoints.check_role import check_roles
@@ -100,3 +101,14 @@ def delete_post_endpoint(
     """Delete a post"""
     delete_post(db, post_id)
     return {"message": "Post deleted successfully"}
+
+@router.put("/{post_id}/moderate", response_model=PostOut)
+def moderate_post_endpoint(
+    post_id: UUID,
+    moderation_data: PostModeration,
+    db: Session = Depends(get_db),
+    current_user: Account = Depends(check_roles([RoleNameEnum.moderator, RoleNameEnum.admin]))
+):
+    """Moderate a post (approve/reject)"""
+    moderation_data.approved_by = current_user.account_id
+    return moderate_post(db, post_id, moderation_data)

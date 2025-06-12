@@ -14,6 +14,10 @@ from app.db.models.unit import Unit
 from app.db.models.post_material import PostMaterial
 from sqlalchemy.orm import Session, joinedload
 import logging
+from app.db.models.account import Account
+from app.schemas.role import RoleNameEnum
+from app.schemas.post import PostModeration
+from app.db.models.post import PostStatusEnum
 logger = logging.getLogger(__name__)
 logging.basicConfig(
     level=logging.INFO,
@@ -333,6 +337,61 @@ def delete_post(db: Session, post_id: UUID):
     try:
         db.delete(post)
         db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+def moderate_post(db: Session, post_id: UUID, moderation_data: PostModeration) -> PostOut:
+    """Moderate a post by updating its status and rejection reason"""
+    try:
+        # Get post and moderator
+        post = db.query(Post).filter(Post.post_id == post_id).first()
+        if not post:
+            raise HTTPException(
+                status_code=404,
+                detail="Post not found"
+            )
+
+        moderator = db.query(Account).filter(Account.account_id == moderation_data.approved_by).first()
+        if not moderator:
+            raise HTTPException(
+                status_code=404,
+                detail="Moderator not found"
+            )
+
+        # Check if moderator has correct role
+        if moderator.role.role_name not in [RoleNameEnum.moderator, RoleNameEnum.admin]:
+            raise HTTPException(
+                status_code=403,
+                detail="Only moderators and admins can moderate posts"
+            )
+
+        # Prevent self-moderation
+        if post.created_by == moderation_data.approved_by:
+            raise HTTPException(
+                status_code=403,
+                detail="Users cannot moderate their own posts"
+            )
+
+        # Update post status and rejection reason
+        post.status = moderation_data.status
+        post.approved_by = moderation_data.approved_by
+        
+        # Set rejection reason only if status is rejected
+        if moderation_data.status == PostStatusEnum.rejected:
+            if not moderation_data.rejection_reason:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Rejection reason is required when rejecting a post"
+                )
+            post.rejection_reason = moderation_data.rejection_reason
+        else:
+            post.rejection_reason = None
+
+        db.commit()
+        db.refresh(post)
+        return get_post_by_id(db, post_id)
+
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
