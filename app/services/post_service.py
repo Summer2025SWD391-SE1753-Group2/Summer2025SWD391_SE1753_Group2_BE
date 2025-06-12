@@ -67,14 +67,29 @@ def create_post(db: Session, post_data: PostCreate) -> PostOut:
                     status_code=400,
                     detail="Duplicate step order numbers are not allowed"
                 )
+
+        # Get creator's role
+        creator = db.query(Account).filter(Account.account_id == post_data.created_by).first()
+        if not creator:
+            raise HTTPException(
+                status_code=404,
+                detail="Creator not found"
+            )
+
+        # Set status based on creator's role
+        status = PostStatusEnum.approved if creator.role.role_name in [RoleNameEnum.moderator, RoleNameEnum.admin] else PostStatusEnum.waiting
+
         post = Post(
             title=post_data.title,
             content=post_data.content,
-            status=post_data.status,
-            rejection_reason=post_data.rejection_reason,
+            status=status,
             created_by=post_data.created_by,
             updated_by=post_data.created_by,
         )
+
+        # If creator is moderator/admin, set approved_by
+        if status == PostStatusEnum.approved:
+            post.approved_by = post_data.created_by
 
         db.add(post)
         db.commit()
@@ -100,6 +115,7 @@ def create_post(db: Session, post_data: PostCreate) -> PostOut:
                     quantity=material_data.quantity
                 )
                 db.add(post_material)
+
         # Handle other relationships (tags, topics, images)
         if post_data.tag_ids:
             tags = db.query(Tag).filter(Tag.tag_id.in_(post_data.tag_ids)).all()
@@ -111,8 +127,9 @@ def create_post(db: Session, post_data: PostCreate) -> PostOut:
 
         if post_data.images:
             for image_url in post_data.images:
-                db_image = PostImage(image_url=image_url, post_id=post.post_id)  # Changed from url to image_url
+                db_image = PostImage(image_url=image_url, post_id=post.post_id)
                 db.add(db_image)
+
         if post_data.steps:
             for step_data in post_data.steps:
                 step = Step(
@@ -121,6 +138,7 @@ def create_post(db: Session, post_data: PostCreate) -> PostOut:
                     content=step_data.content
                 )
                 db.add(step)
+
         db.commit()
         db.refresh(post)
         return get_post_by_id(db, post.post_id)
