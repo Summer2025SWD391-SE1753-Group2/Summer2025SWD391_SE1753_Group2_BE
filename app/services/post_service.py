@@ -280,6 +280,13 @@ def update_post(db: Session, post_id: UUID, post_data: PostUpdate) ->  PostOut:
     post = get_post_by_id(db, post_id)
 
     try:
+        # Check if post is rejected
+        if post.status == "rejected":
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot edit a rejected post"
+            )
+
         # Validate required fields if provided
         if post_data.topic_ids is not None and not post_data.topic_ids:
             raise HTTPException(
