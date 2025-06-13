@@ -24,21 +24,16 @@ class CommentService:
         # Set default level and parent comment
         level = 1
         parent_comment = None
-        print(f"Initial level: {level}") # In ra level khởi tạo
-        print(f"Initial parent_comment: {parent_comment}") # In ra parent_comment khởi tạo
 
         # If parent_comment_id exists, validate and get parent comment
         if comment.parent_comment_id:
             parent_comment = db.query(Comment).filter(Comment.comment_id == comment.parent_comment_id).first()
-            print(f"Parent comment found (after query): {parent_comment.comment_id if parent_comment else 'None'}") # In ra parent_comment_id nếu tìm thấy
             if not parent_comment:
                 raise HTTPException(status_code=404, detail="Parent comment not found")
             if parent_comment.post_id != comment.post_id:
                 raise HTTPException(status_code=400, detail="Parent comment must be from the same post")
             # Level của comment con = level của comment cha + 1
             level = parent_comment.level + 1
-            print(f"Updated level (based on parent): {level}") # In ra level sau khi cập nhật
-            print(f"Parent comment object (after update): {parent_comment}") # In ra đối tượng parent_comment
 
         # Tạo comment mới với level đã tính
         comment_data = {
@@ -46,27 +41,13 @@ class CommentService:
             "account_id": user_id,
             "content": comment.content,
             "parent_comment_id": comment.parent_comment_id if comment.parent_comment_id else None,
-            "level": level  # Gán level đã tính
+            "level": level
         }
-        print(f"Comment data before creation: {comment_data}") # In ra dữ liệu trước khi tạo
 
         db_comment = Comment(**comment_data)
-        print(f"db_comment created with level: {db_comment.level}") # In ra level của db_comment khi khởi tạo
-        print(f"db_comment parent_comment_id: {db_comment.parent_comment_id}") # In ra parent_comment_id của db_comment
-
         db.add(db_comment)
         db.commit()
         db.refresh(db_comment)
-
-        print(f"db_comment after commit and refresh - comment_id: {db_comment.comment_id}, level: {db_comment.level}") # In ra thông tin sau commit
-
-        # Add parent comment to response if exists
-        if comment.parent_comment_id:
-            # Gán lại parent_comment sau khi commit để có đầy đủ thông tin
-            db_comment.parent_comment = db.query(Comment).filter(Comment.comment_id == comment.parent_comment_id).first()
-            print(f"db_comment.parent_comment (after re-query): {db_comment.parent_comment}") # In ra parent_comment sau khi truy vấn lại
-            db_comment.parent_level = db_comment.parent_comment.level
-            print(f"db_comment.parent_level: {db_comment.parent_level}") # In ra parent_level
 
         return db_comment
 
@@ -79,35 +60,52 @@ class CommentService:
         db: Session,
         post_id: str,
         skip: int = 0,
-        limit: int = 10
+        limit: int = 100
     ) -> list[Comment]:
         from sqlalchemy.orm import joinedload
+        from app.db.models.comment import CommentStatusEnum
         
         # Validate post exists
         post = db.query(Post).filter(Post.post_id == post_id).first()
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
 
-        # Get root comments (no parent) with account info
-        root_comments = db.query(Comment)\
+        # Get all active comments for the post
+        all_comments = db.query(Comment)\
             .options(joinedload(Comment.account))\
             .filter(Comment.post_id == post_id)\
-            .filter(Comment.parent_comment_id.is_(None))\
-            .order_by(Comment.created_at.desc())\
-            .offset(skip)\
-            .limit(limit)\
+            .filter(Comment.status == CommentStatusEnum.active)\
+            .order_by(Comment.created_at.asc())\
             .all()
 
-        # For each root comment, get its replies with account info
-        for comment in root_comments:
-            replies = db.query(Comment)\
-                .options(joinedload(Comment.account))\
-                .filter(Comment.parent_comment_id == comment.comment_id)\
-                .order_by(Comment.created_at.asc())\
-                .all()
-            comment.replies = replies
+        # Create a dictionary to store comments by their ID
+        comment_dict = {comment.comment_id: comment for comment in all_comments}
+        
+        # Build nested structure
+        root_comments = []
+        for comment in all_comments:
+            if comment.parent_comment_id is None:
+                root_comments.append(comment)
+            else:
+                parent = comment_dict.get(comment.parent_comment_id)
+                if parent:
+                    if not hasattr(parent, 'replies') or parent.replies is None:
+                        parent.replies = []
+                    parent.replies.append(comment)
 
-        return root_comments
+        # Recursive function to sort replies by created_at
+        def sort_replies(comment_list):
+            for comment in comment_list:
+                if hasattr(comment, 'replies') and comment.replies:
+                    comment.replies.sort(key=lambda x: x.created_at)
+                    sort_replies(comment.replies)
+
+        # Sort all replies recursively
+        sort_replies(root_comments)
+
+        # Sort root comments by created_at desc and apply pagination
+        root_comments.sort(key=lambda x: x.created_at, reverse=True)
+        return root_comments[skip:skip + limit]
 
     @staticmethod
     def update_comment(
@@ -128,10 +126,14 @@ class CommentService:
 
     @staticmethod
     def delete_comment(db: Session, comment_id: UUID) -> Comment:
+        from app.db.models.comment import CommentStatusEnum
+        
         db_comment = db.query(Comment).filter(Comment.comment_id == comment_id).first()
         if not db_comment:
             raise HTTPException(status_code=404, detail="Comment not found")
 
-        db.delete(db_comment)
+        # Soft delete by changing status
+        db_comment.status = CommentStatusEnum.deleted
         db.commit()
+        db.refresh(db_comment)
         return db_comment
