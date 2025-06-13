@@ -8,6 +8,7 @@ from app.db.models.material import Material
 from app.db.models.topic import Topic
 from app.schemas.post import PostCreate, PostUpdate
 from sqlalchemy import or_
+from typing import List
 from app.schemas.post import PostOut
 from app.db.models.step import Step
 from app.db.models.unit import Unit
