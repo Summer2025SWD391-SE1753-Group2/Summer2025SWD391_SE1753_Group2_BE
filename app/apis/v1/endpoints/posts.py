@@ -9,7 +9,7 @@ from app.services.post_service import (
     create_post, get_post_by_id, get_all_posts,
     update_post, delete_post, search_posts,
     search_posts_by_tag_name, search_posts_by_topic_name, get_my_posts,
-    moderate_post
+    moderate_post, get_approved_posts
 )
 from app.schemas.account import RoleNameEnum
 from app.apis.v1.endpoints.check_role import check_roles
@@ -35,7 +35,14 @@ def search_posts_endpoint(
 ):
     """Search posts by title"""
     return search_posts(db, title, skip=skip, limit=limit)
-
+@router.get("/approved/", response_model=List[PostOut])
+def get_approved_posts_endpoint(
+    skip: int = Query(0, ge=0, description="Number of posts to skip"),
+    limit: int = Query(10, ge=1, le=100, description="Number of posts to return"),
+    db: Session = Depends(get_db)
+):
+    """Get all approved posts with pagination"""
+    return get_approved_posts(db, skip=skip, limit=limit)
 @router.get("/search/by-tag/", response_model=List[PostOut])
 def search_posts_by_tag_endpoint(
     tag_name: str = Query(..., min_length=1),

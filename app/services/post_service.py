@@ -146,6 +146,28 @@ def create_post(db: Session, post_data: PostCreate) -> PostOut:
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+def get_approved_posts(db: Session, skip: int = 0, limit: int = 100) -> List[PostOut]:
+    """Get all approved posts with eager loading of relationships"""
+    try:
+        posts = db.query(Post)\
+            .options(
+                joinedload(Post.tags),
+                joinedload(Post.topics),
+                joinedload(Post.images),
+                joinedload(Post.steps),
+                joinedload(Post.post_materials).joinedload(PostMaterial.material)
+            )\
+            .filter(Post.status == PostStatusEnum.approved)\
+            .order_by(Post.created_at.desc())\
+            .offset(skip)\
+            .limit(limit)\
+            .all()
+
+        return [PostOut.from_orm(post) for post in posts]
+
+    except Exception as e:
+        logger.error(f"Error in get_approved_posts: {str(e)}", exc_info=True)
+        raise
 def search_posts_by_topic_name(db: Session, topic_name: str, skip: int = 0, limit: int = 100):
     """Search posts by topic name with eager loading"""
     posts = db.query(Post)\
