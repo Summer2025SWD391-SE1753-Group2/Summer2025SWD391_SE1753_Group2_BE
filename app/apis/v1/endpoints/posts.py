@@ -109,13 +109,13 @@ def delete_post_endpoint(
     delete_post(db, post_id)
     return {"message": "Post deleted successfully"}
 
-@router.put("/{post_id}/moderate", response_model=PostOut)
-def moderate_post_endpoint(
+@router.put("/{post_id}/review", response_model=PostOut)
+def review_post_endpoint(
     post_id: UUID,
     moderation_data: PostModeration,
     db: Session = Depends(get_db),
     current_user: Account = Depends(check_roles([RoleNameEnum.moderator, RoleNameEnum.admin]))
 ):
-    """Moderate a post (approve/reject)"""
+    """Review a post (approve or reject)"""
     moderation_data.approved_by = current_user.account_id
     return moderate_post(db, post_id, moderation_data)
