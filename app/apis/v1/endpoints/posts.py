@@ -93,7 +93,7 @@ def update_post_endpoint(
     post_id: UUID,
     post_data: PostUpdate,
     db: Session = Depends(get_db),
-    current_user: Account = Depends(check_roles([RoleNameEnum.moderator, RoleNameEnum.admin]))
+    current_user: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
 ):
     """Update a post"""
     post_data.updated_by = current_user.account_id
