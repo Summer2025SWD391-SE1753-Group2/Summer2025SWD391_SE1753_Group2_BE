@@ -184,7 +184,26 @@ def delete_favourite(db: Session, favourite_id: UUID) -> None:
         db.commit()
 
 def add_post_to_favourite(db: Session, favourite_id: UUID, post_id: UUID) -> None:
-    """Add post to favourite list by ID"""
+    """Add a post to a favourite list"""
+    favourite = get_favourite(db, favourite_id)
+    if not favourite:
+        raise HTTPException(status_code=404, detail="Favourite list not found")
+    
+    # Check if post exists and is approved
+    post = db.query(Post).filter(Post.post_id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if post.status != "approved":
+        raise HTTPException(status_code=400, detail="Only approved posts can be added to favourites")
+    
+    # Check if post is already in the favourite list
+    existing_favourite_post = db.query(favourite_posts).filter(
+        favourite_posts.c.favourite_id == favourite_id,
+        favourite_posts.c.post_id == post_id
+    ).first()
+    if existing_favourite_post:
+        raise HTTPException(status_code=400, detail="Post is already in this favourite list")
+    
     stmt = favourite_posts.insert().values(
         favourite_id=favourite_id,
         post_id=post_id
@@ -193,13 +212,28 @@ def add_post_to_favourite(db: Session, favourite_id: UUID, post_id: UUID) -> Non
     db.commit()
 
 def add_post_to_favourite_by_name(db: Session, favourite_name: str, post_id: UUID, account_id: UUID) -> None:
-    """Add post to favourite list by name"""
-    favourite = get_favourite_by_name(db, favourite_name, account_id)
+    """Add a post to a favourite list by name"""
+    favourite = db.query(Favourite).filter(
+        Favourite.favourite_name == favourite_name,
+        Favourite.account_id == account_id
+    ).first()
     if not favourite:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Favourite list not found"
-        )
+        raise HTTPException(status_code=404, detail="Favourite list not found")
+    
+    # Check if post exists and is approved
+    post = db.query(Post).filter(Post.post_id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if post.status != "approved":
+        raise HTTPException(status_code=400, detail="Only approved posts can be added to favourites")
+    
+    # Check if post is already in the favourite list
+    existing_favourite_post = db.query(favourite_posts).filter(
+        favourite_posts.c.favourite_id == favourite.favourite_id,
+        favourite_posts.c.post_id == post_id
+    ).first()
+    if existing_favourite_post:
+        raise HTTPException(status_code=400, detail="Post is already in this favourite list")
     
     stmt = favourite_posts.insert().values(
         favourite_id=favourite.favourite_id,
