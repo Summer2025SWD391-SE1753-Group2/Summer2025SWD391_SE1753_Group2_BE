@@ -19,6 +19,7 @@ from app.db.models.account import Account
 from app.schemas.role import RoleNameEnum
 from app.schemas.post import PostModeration
 from app.db.models.post import PostStatusEnum
+from app.db.models.comment import Comment
 logger = logging.getLogger(__name__)
 logging.basicConfig(
     level=logging.INFO,
@@ -277,7 +278,10 @@ def get_my_posts(db: Session, user_id: UUID, skip: int = 0, limit: int = 100) ->
         logger.error(f"Error in get_my_posts: {str(e)}", exc_info=True)
         raise
 def update_post(db: Session, post_id: UUID, post_data: PostUpdate) ->  PostOut:
-    post = get_post_by_id(db, post_id)
+    # Get the actual DB model, not the Pydantic model
+    post = db.query(Post).filter(Post.post_id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
 
     try:
         # Check if post is rejected
@@ -307,12 +311,22 @@ def update_post(db: Session, post_id: UUID, post_data: PostUpdate) ->  PostOut:
                     status_code=400,
                     detail="Duplicate step order numbers are not allowed"
                 )
-        # Update basic fields
-        post.title = post_data.title
-        post.content = post_data.content
-        post.status = post_data.status
-        post.rejection_reason = post_data.rejection_reason
-        post.updated_by = post_data.updated_by
+        # IMPORTANT: When post is updated, it needs to go through moderation again
+        # Set status to waiting and clear previous moderation data
+        post.status = PostStatusEnum.waiting
+        post.approved_by = None
+        post.rejection_reason = None
+        
+        # Delete all comments related to this post (as per requirement)
+        db.query(Comment).filter(Comment.post_id == post_id).delete()
+        
+        # Update basic fields - Only update what's provided in PostUpdate
+        if post_data.title is not None:
+            post.title = post_data.title
+        if post_data.content is not None:
+            post.content = post_data.content
+        if post_data.updated_by is not None:
+            post.updated_by = post_data.updated_by
         
         # Update tags
         if post_data.tag_ids is not None:

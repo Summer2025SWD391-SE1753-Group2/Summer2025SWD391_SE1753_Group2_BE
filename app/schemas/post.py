@@ -46,7 +46,10 @@ class PostCreate(PostBase):
     steps: List[StepCreate] = []
     created_by: Optional[UUID] = None
 
-class PostUpdate(PostBase):
+class PostUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=300)
+    content: Optional[str] = Field(None, min_length=1)
+    rejection_reason: Optional[str] = None
     tag_ids: Optional[List[UUID]] = None
     materials: Optional[List[PostMaterialCreate]] = None
     topic_ids: Optional[List[UUID]] = None
