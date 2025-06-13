@@ -81,23 +81,29 @@ class CommentService:
         skip: int = 0,
         limit: int = 10
     ) -> list[Comment]:
+        from sqlalchemy.orm import joinedload
+        
         # Validate post exists
         post = db.query(Post).filter(Post.post_id == post_id).first()
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
 
-        # Get root comments (no parent)
+        # Get root comments (no parent) with account info
         root_comments = db.query(Comment)\
+            .options(joinedload(Comment.account))\
             .filter(Comment.post_id == post_id)\
             .filter(Comment.parent_comment_id.is_(None))\
+            .order_by(Comment.created_at.desc())\
             .offset(skip)\
             .limit(limit)\
             .all()
 
-        # For each root comment, get its replies
+        # For each root comment, get its replies with account info
         for comment in root_comments:
             replies = db.query(Comment)\
+                .options(joinedload(Comment.account))\
                 .filter(Comment.parent_comment_id == comment.comment_id)\
+                .order_by(Comment.created_at.asc())\
                 .all()
             comment.replies = replies
 

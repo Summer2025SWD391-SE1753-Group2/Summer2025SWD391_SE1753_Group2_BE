@@ -4,13 +4,22 @@ from datetime import datetime
 from app.db.models.comment import CommentStatusEnum
 from uuid import UUID
 
+class AccountInfo(BaseModel):
+    account_id: UUID4
+    username: str
+    full_name: str
+    avatar: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
 class CommentBase(BaseModel):
     content: str
     post_id: UUID4
     parent_comment_id: Optional[UUID4] = None
 
 class CommentCreate(CommentBase):
-    account_id: UUID4 = Field(..., description="ID of the account creating the comment")
+    pass  # account_id will be set automatically from authenticated user
 
 class CommentUpdate(BaseModel):
     content: str
@@ -24,7 +33,8 @@ class CommentInDBBase(CommentBase):
     status: str
     created_at: datetime
     level: int
-    parent_level: Optional[int] = None
+    account: Optional[AccountInfo] = None
+    replies: Optional[List['Comment']] = None
 
     class Config:
         from_attributes = True
@@ -33,4 +43,4 @@ class Comment(CommentInDBBase):
     pass
 
 # Fix circular reference
-CommentInDBBase.model_rebuild() 
+Comment.model_rebuild() 

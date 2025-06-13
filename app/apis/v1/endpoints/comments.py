@@ -31,9 +31,6 @@ def create_comment(
             detail="Only users with role 'user' or higher can create comments"
         )
     
-    # Set the account_id from current user
-    comment.account_id = current_user.account_id
-    
     return CommentService.create_comment(db, comment, current_user.account_id)
 
 @router.get("/{comment_id}", response_model=Comment)
