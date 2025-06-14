@@ -5,7 +5,7 @@ from app.db.models.favourite import Favourite
 from app.db.models.favourite_post import favourite_posts
 from app.db.models.post import Post
 from app.schemas.favourite import FavouriteCreate, FavouriteUpdate
-from sqlalchemy import desc, asc
+from sqlalchemy import desc, asc, func
 from fastapi import HTTPException, status
 
 def create_favourite(
@@ -54,9 +54,22 @@ def get_favourites(
     search: Optional[str] = None,
     sort_by: Optional[str] = None,
     sort_order: Optional[str] = None
-) -> List[Favourite]:
-    """Get all favourite lists with search and sort options"""
-    query = db.query(Favourite).filter(Favourite.account_id == account_id)
+) -> List[dict]:
+    """Get all favourite lists with search and sort options, including post count"""
+    # Create subquery to count posts for each favourite
+    post_count_subquery = db.query(
+        favourite_posts.c.favourite_id,
+        func.count(favourite_posts.c.post_id).label('post_count')
+    ).group_by(favourite_posts.c.favourite_id).subquery()
+    
+    # Join Favourite with post count
+    query = db.query(
+        Favourite,
+        func.coalesce(post_count_subquery.c.post_count, 0).label('post_count')
+    ).outerjoin(
+        post_count_subquery,
+        Favourite.favourite_id == post_count_subquery.c.favourite_id
+    ).filter(Favourite.account_id == account_id)
     
     if search:
         query = query.filter(Favourite.favourite_name.ilike(f"%{search}%"))
@@ -73,7 +86,21 @@ def get_favourites(
             else:
                 query = query.order_by(asc(Favourite.favourite_name))
     
-    return query.offset(skip).limit(limit).all()
+    results = query.offset(skip).limit(limit).all()
+    
+    # Convert to list of dictionaries with post_count included
+    favourites = []
+    for favourite, post_count in results:
+        favourite_dict = {
+            "favourite_id": favourite.favourite_id,
+            "favourite_name": favourite.favourite_name,
+            "account_id": favourite.account_id,
+            "created_at": favourite.created_at,
+            "post_count": post_count
+        }
+        favourites.append(favourite_dict)
+    
+    return favourites
 
 def get_posts_by_favourite_id(
     db: Session,
