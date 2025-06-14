@@ -70,16 +70,20 @@ class CommentService:
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
 
-        # Get all active comments for the post
+        # Get all comments (including deleted ones to show them with special message)
         all_comments = db.query(Comment)\
             .options(joinedload(Comment.account))\
             .filter(Comment.post_id == post_id)\
-            .filter(Comment.status == CommentStatusEnum.active)\
+            .filter(Comment.status.in_([CommentStatusEnum.active, CommentStatusEnum.deleted]))\
             .order_by(Comment.created_at.asc())\
             .all()
 
         # Create a dictionary to store comments by their ID
         comment_dict = {comment.comment_id: comment for comment in all_comments}
+        
+        # Initialize replies list for all comments (including deleted ones)
+        for comment in all_comments:
+            comment.replies = []
         
         # Build nested structure
         root_comments = []
@@ -89,8 +93,6 @@ class CommentService:
             else:
                 parent = comment_dict.get(comment.parent_comment_id)
                 if parent:
-                    if not hasattr(parent, 'replies') or parent.replies is None:
-                        parent.replies = []
                     parent.replies.append(comment)
 
         # Recursive function to sort replies by created_at
@@ -106,6 +108,59 @@ class CommentService:
         # Sort root comments by created_at desc and apply pagination
         root_comments.sort(key=lambda x: x.created_at, reverse=True)
         return root_comments[skip:skip + limit]
+
+    @staticmethod
+    def get_nested_comments(db: Session, post_id: str) -> list[Comment]:
+        """
+        Get all comments for a post with their nested replies.
+        This method returns all comments including deleted ones to show with special UI.
+        """
+        from sqlalchemy.orm import joinedload
+        from app.db.models.comment import CommentStatusEnum
+        
+        # Validate post exists
+        post = db.query(Post).filter(Post.post_id == post_id).first()
+        if not post:
+            raise HTTPException(status_code=404, detail="Post not found")
+
+        # Get all comments (including deleted ones to show them with special message)
+        all_comments = db.query(Comment)\
+            .options(joinedload(Comment.account))\
+            .filter(Comment.post_id == post_id)\
+            .filter(Comment.status.in_([CommentStatusEnum.active, CommentStatusEnum.deleted]))\
+            .order_by(Comment.created_at.asc())\
+            .all()
+
+        # Create a dictionary to store comments by their ID
+        comment_dict = {comment.comment_id: comment for comment in all_comments}
+        
+        # Initialize replies list for all comments (including deleted ones)
+        for comment in all_comments:
+            comment.replies = []
+        
+        # Build nested structure
+        root_comments = []
+        for comment in all_comments:
+            if comment.parent_comment_id is None:
+                root_comments.append(comment)
+            else:
+                parent = comment_dict.get(comment.parent_comment_id)
+                if parent:
+                    parent.replies.append(comment)
+
+        # Recursive function to sort replies by created_at
+        def sort_replies(comment_list):
+            for comment in comment_list:
+                if hasattr(comment, 'replies') and comment.replies:
+                    comment.replies.sort(key=lambda x: x.created_at)
+                    sort_replies(comment.replies)
+
+        # Sort all replies recursively
+        sort_replies(root_comments)
+
+        # Sort root comments by created_at desc
+        root_comments.sort(key=lambda x: x.created_at, reverse=True)
+        return root_comments
 
     @staticmethod
     def update_comment(

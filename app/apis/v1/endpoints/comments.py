@@ -108,22 +108,21 @@ def update_comment_status(
     Update comment status.
     Only moderators and admins can update comment status.
     """
+    # Check if user has permission to update comment status
     if current_user.role.role_name not in [RoleNameEnum.moderator, RoleNameEnum.admin]:
         raise HTTPException(
             status_code=403,
-            detail="Not enough permissions"
+            detail="Only moderators and admins can update comment status"
         )
+    
     db_comment = CommentService.get_comment(db, comment_id)
     if not db_comment:
         raise HTTPException(
             status_code=404,
             detail="Comment not found"
         )
-    if db_comment.account_id != current_user.account_id:
-        raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
-        )
+    
+    # Moderators and admins can update status of any comment
     return CommentService.update_comment(db, comment_id, status)
 
 @router.delete("/{comment_id}", response_model=Comment)
@@ -142,9 +141,15 @@ def delete_comment(
             status_code=404,
             detail="Comment not found"
         )
-    if db_comment.account_id != current_user.account_id:
+    
+    # Check permissions: owner, moderator, or admin can delete
+    is_owner = db_comment.account_id == current_user.account_id
+    is_moderator_or_admin = current_user.role.role_name in [RoleNameEnum.moderator, RoleNameEnum.admin]
+    
+    if not (is_owner or is_moderator_or_admin):
         raise HTTPException(
             status_code=403,
-            detail="Not enough permissions"
+            detail="Not enough permissions to delete this comment"
         )
+    
     return CommentService.delete_comment(db, comment_id) 

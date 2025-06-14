@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import event
 import uuid
@@ -21,7 +21,7 @@ class Comment(Base):
     content = Column(Text, nullable=False)
     parent_comment_id = Column(UUID, ForeignKey("comments.comment_id", ondelete="CASCADE"), nullable=True)
     status = Column(Enum(CommentStatusEnum), default=CommentStatusEnum.active)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     level = Column(Integer, default=1)  # Track nesting level
 
     # Relationships
