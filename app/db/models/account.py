@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from app.db.base_class import Base
 from datetime import datetime, timezone
 from app.db.models.post import Post
+from app.db.models.friend import Friend
 import enum
 import uuid
 from sqlalchemy.dialects.postgresql import UUID
@@ -59,9 +60,16 @@ class Account(Base):
 
     # Liên kết với Favourite
     favourites = relationship("Favourite", back_populates="account", cascade="all, delete-orphan")
-    friends_sent = relationship("Friend", 
-                              foreign_keys="[Friend.sender_id]",
-                              back_populates="sender")
-    friends_received = relationship("Friend",
-                                  foreign_keys="[Friend.receiver_id]",
-                                  back_populates="receiver")
+    friends_sent = relationship(
+        "Friend",
+        primaryjoin="Account.account_id==Friend.sender_id",
+        back_populates="sender",
+        cascade="all, delete-orphan"
+    )
+    
+    friends_received = relationship(
+        "Friend",
+        primaryjoin="Account.account_id==Friend.receiver_id", 
+        back_populates="receiver",
+        cascade="all, delete-orphan"
+    )
