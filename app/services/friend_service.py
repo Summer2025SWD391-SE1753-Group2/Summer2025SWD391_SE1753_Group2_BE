@@ -85,3 +85,16 @@ def get_pending_requests(db: Session, account_id: UUID) -> List[Friend]:
         Friend.receiver_id == account_id,
         Friend.status == FriendStatusEnum.pending
     ).all()
+def remove_friend_service(db: Session, account_id: UUID, friend_id: UUID):
+    friendship = db.query(Friend).filter(
+        ((Friend.sender_id == account_id) & (Friend.receiver_id == friend_id)) |
+        ((Friend.sender_id == friend_id) & (Friend.receiver_id == account_id)),
+        Friend.status == FriendStatusEnum.accepted
+    ).first()
+
+    if not friendship:
+        raise HTTPException(status_code=404, detail="Friendship not found")
+
+    db.delete(friendship)
+    db.commit()
+    return {"message": "Friend removed successfully"}

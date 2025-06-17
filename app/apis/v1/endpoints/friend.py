@@ -8,7 +8,8 @@ from app.services.friend_service import (
     accept_friend_request,
     reject_friend_request,
     get_friends,
-    get_pending_requests
+    get_pending_requests,
+    remove_friend_service
 )
 from typing import List
 from app.schemas.account import AccountOut
@@ -52,3 +53,12 @@ def list_pending_requests(
     current_user = Depends(get_current_active_account)
 ):
     return get_pending_requests(db, current_user.account_id)
+@router.delete("/{friend_id}", 
+              summary="Remove friend",
+              description="Remove a user from friends list")
+def remove_friend(
+    friend_id: UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_account)
+):
+    return remove_friend_service(db, current_user.account_id, friend_id)
