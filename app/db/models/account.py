@@ -59,3 +59,9 @@ class Account(Base):
 
     # Liên kết với Favourite
     favourites = relationship("Favourite", back_populates="account", cascade="all, delete-orphan")
+    friends_sent = relationship("Friend", 
+                              foreign_keys="[Friend.sender_id]",
+                              back_populates="sender")
+    friends_received = relationship("Friend",
+                                  foreign_keys="[Friend.receiver_id]",
+                                  back_populates="receiver")

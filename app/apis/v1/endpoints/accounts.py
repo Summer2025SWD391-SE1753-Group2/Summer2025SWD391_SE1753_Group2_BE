@@ -5,6 +5,7 @@ from app.schemas.account import AccountOut, AccountUpdate, AccountCreate, RoleNa
 from app.services.account_service import search_accounts_by_name, confirm_email, update_account_profile, send_confirmation_email, get_account_profile
 from app.core.deps import get_db, get_current_active_account
 from app.db.models.account import Account, AccountStatusEnum
+from app.services import account_service
 from app.apis.v1.endpoints.check_role import check_roles
 
 router = APIRouter()
