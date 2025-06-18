@@ -227,6 +227,8 @@ class AccountOut(AccountBase):
     updated_at: datetime
     created_by: Optional[UUID]
     updated_by: Optional[UUID]
+    friend_count: Optional[int] = None
+    is_friend: Optional[bool] = None
 
     model_config = ConfigDict(from_attributes=True)
 

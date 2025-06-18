@@ -10,6 +10,7 @@ from app.db.models.material import Material
 from app.db.models.tag import Tag
 from app.db.models.topic import Topic
 from app.db.models.postImage import PostImage
+from app.db.models.friend import Friend
 from app.db.models.post_topic import post_topic
 from app.db.models.unit import Unit
 from app.db.models.post_material import PostMaterial

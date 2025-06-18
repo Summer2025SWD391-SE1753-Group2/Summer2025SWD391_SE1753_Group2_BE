@@ -50,6 +50,14 @@ def search_posts(db: Session, title: str, skip: int = 0, limit: int = 100):
 
 def create_post(db: Session, post_data: PostCreate) -> PostOut:
     try:
+        # Set status based on user role
+        current_user = db.query(Account).filter(Account.account_id == post_data.created_by).first()
+        if current_user and current_user.role.role_name in ["moderator", "admin"]:
+            post_data.status = "approved"
+        else:
+            post_data.status = "waiting"
+
+        # Validate required fields
         if not post_data.topic_ids:
             raise HTTPException(
                 status_code=400,
@@ -290,6 +298,13 @@ def update_post(db: Session, post_id: UUID, post_data: PostUpdate) ->  PostOut:
                 status_code=400,
                 detail="Cannot edit a rejected post"
             )
+
+        # Set status based on user role
+        current_user = db.query(Account).filter(Account.account_id == post_data.updated_by).first()
+        if current_user and current_user.role.role_name in ["moderator", "admin"]:
+            post_data.status = "approved"
+        elif post.status in ["waiting", "approved"]:
+            post_data.status = "waiting"
 
         # Validate required fields if provided
         if post_data.topic_ids is not None and not post_data.topic_ids:
