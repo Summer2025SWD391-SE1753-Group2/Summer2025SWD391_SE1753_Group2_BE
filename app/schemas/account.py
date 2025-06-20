@@ -54,6 +54,7 @@ class AccountBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
     avatar: Optional[str] = None
+    background_url: Optional[str] = None
     bio: Optional[str] = None
 
     @field_validator("username")
@@ -166,6 +167,9 @@ class AccountUpdate(BaseModel):
     phone: Optional[str] = None
     full_name: Optional[str] = None
     date_of_birth: Optional[date] = None
+    avatar: Optional[str] = None
+    background_url: Optional[str] = None
+    bio: Optional[str] = None
 
     @field_validator("email")
     @classmethod
