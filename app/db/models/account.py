@@ -27,6 +27,7 @@ class Account(Base):
     full_name = Column(String(255))
     date_of_birth = Column(Date, nullable=True)
     avatar = Column(Text, nullable=True)
+    background_url = Column(Text, nullable=True)
     bio = Column(Text, nullable=True)
     status = Column(Enum(AccountStatusEnum), default=AccountStatusEnum.active)
     
