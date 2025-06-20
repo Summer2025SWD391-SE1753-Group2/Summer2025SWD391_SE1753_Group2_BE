@@ -15,7 +15,7 @@ from app.services.token_service import TokenService
 from app.core.deps import get_db
 from app.db.models.account import Account, AccountStatusEnum
 from app.services.email_service import send_reset_password_email
-from app.services.otp_service import send_otp, verify_otp
+# from app.services.otp_service import send_otp, verify_otp
 from app.schemas.account import AccountCreate, AccountOut, SendOTPRequest, VerifyPhoneRequest, VerifyPhoneResponse
 from app.services.account_service import create_account as service_create_account
 from app.services.google_auth_service import get_google_token, get_google_user_info, get_or_create_google_account
@@ -244,13 +244,13 @@ async def forgot_password(
             detail="Account is not active"
         )
 
-    if account.phone_number and account.phone_verified:
-        await send_otp(account.phone_number)
-        return {
-            "message": "OTP sent to your phone number",
-            "method": "phone",
-            "username": account.username
-        }
+    # if account.phone_number and account.phone_verified:
+    #     await send_otp(account.phone_number)
+    #     return {
+    #         "message": "OTP sent to your phone number",
+    #         "method": "phone",
+    #         "username": account.username
+    #     }
 
     await send_reset_password_email(account.email, account.username)
     return {
@@ -323,11 +323,11 @@ async def reset_password_otp(
             detail="Phone number not verified or not registered for this account."
         )
 
-    if not await verify_otp(account.phone_number, request.otp):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid or expired OTP"
-        )
+    # if not await verify_otp(account.phone_number, request.otp):
+    #     raise HTTPException(
+    #         status_code=400,
+    #         detail="Invalid or expired OTP"
+    #     )
 
     account.password_hash = get_password_hash(request.new_password)
     db.commit()
@@ -337,66 +337,66 @@ async def reset_password_otp(
         "username": account.username
     }
 
-@router.post("/send-otp")
-async def send_otp_phone(
-    data: SendOTPRequest,
-    db: Session = Depends(get_db),
-    # FIX: Remove Depends() around Security()
-    token_data: TokenData = Security(get_current_user, scopes=["me"])
-):
-    phone_number = data.phone_number
-    user = db.query(Account).filter(Account.account_id == token_data.user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Authenticated account not found.")
+# @router.post("/send-otp")
+# async def send_otp_phone(
+#     data: SendOTPRequest,
+#     db: Session = Depends(get_db),
+#     # FIX: Remove Depends() around Security()
+#     token_data: TokenData = Security(get_current_user, scopes=["me"])
+# ):
+#     phone_number = data.phone_number
+#     user = db.query(Account).filter(Account.account_id == token_data.user_id).first()
+#     if not user:
+#         raise HTTPException(status_code=404, detail="Authenticated account not found.")
 
-    if user.phone_verified:
-        raise HTTPException(status_code=400, detail="Phone number is already verified for this account.")
+#     if user.phone_verified:
+#         raise HTTPException(status_code=400, detail="Phone number is already verified for this account.")
 
-    existing_phone_user = db.query(Account).filter(
-        Account.phone_number == phone_number,
-        Account.account_id != user.account_id
-    ).first()
-    if existing_phone_user:
-        raise HTTPException(status_code=400, detail="This phone number is already in use by another account.")
+#     existing_phone_user = db.query(Account).filter(
+#         Account.phone_number == phone_number,
+#         Account.account_id != user.account_id
+#     ).first()
+#     if existing_phone_user:
+#         raise HTTPException(status_code=400, detail="This phone number is already in use by another account.")
 
-    await send_otp(phone_number)
+#     await send_otp(phone_number)
 
-    user.phone_number = phone_number
-    user.phone_verified = False
-    db.commit()
-    db.refresh(user)
+#     user.phone_number = phone_number
+#     user.phone_verified = False
+#     db.commit()
+#     db.refresh(user)
 
-    return {"message": f"OTP sent to {phone_number}. OTP is valid for 5 minutes."}
+#     return {"message": f"OTP sent to {phone_number}. OTP is valid for 5 minutes."}
 
-@router.post("/verify-phone", response_model=VerifyPhoneResponse)
-async def verify_phone(
-    request: VerifyPhoneRequest,
-    db: Session = Depends(get_db),
-    # FIX: Remove Depends() around Security()
-    token_data: TokenData = Security(get_current_user, scopes=["me"])
-):
-    user = db.query(Account).filter(Account.account_id == token_data.user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Authenticated account not found.")
+# @router.post("/verify-phone", response_model=VerifyPhoneResponse)
+# async def verify_phone(
+#     request: VerifyPhoneRequest,
+#     db: Session = Depends(get_db),
+#     # FIX: Remove Depends() around Security()
+#     token_data: TokenData = Security(get_current_user, scopes=["me"])
+# ):
+#     user = db.query(Account).filter(Account.account_id == token_data.user_id).first()
+#     if not user:
+#         raise HTTPException(status_code=404, detail="Authenticated account not found.")
 
-    if not user.phone_number or user.phone_number != request.phone_number:
-        raise HTTPException(status_code=400, detail="Phone number mismatch or not registered for this account.")
+#     if not user.phone_number or user.phone_number != request.phone_number:
+#         raise HTTPException(status_code=400, detail="Phone number mismatch or not registered for this account.")
 
-    if user.phone_verified:
-        raise HTTPException(status_code=400, detail="Phone number is already verified.")
+#     if user.phone_verified:
+#         raise HTTPException(status_code=400, detail="Phone number is already verified.")
 
-    if not await verify_otp(user.phone_number, request.otp):
-        raise HTTPException(status_code=400, detail="Invalid or expired OTP.")
+#     if not await verify_otp(user.phone_number, request.otp):
+#         raise HTTPException(status_code=400, detail="Invalid or expired OTP.")
 
-    user.phone_verified = True
-    db.commit()
-    db.refresh(user)
+#     user.phone_verified = True
+#     db.commit()
+#     db.refresh(user)
 
-    return {
-        "message": "Phone number verified successfully.",
-        "username": user.username,
-        "role": user.role.role_name if user.role else "user"
-    }
+#     return {
+#         "message": "Phone number verified successfully.",
+#         "username": user.username,
+#         "role": user.role.role_name if user.role else "user"
+#     }
 
 class VerifyEmailRequest(BaseModel):
     username: str
