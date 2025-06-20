@@ -233,40 +233,40 @@ class AccountOut(AccountBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class VerifyPhoneRequest(BaseModel):
-    """
-    Pydantic model for verifying a phone number with an OTP.
-    """
-    phone_number: str
-    otp: str
+# class VerifyPhoneRequest(BaseModel):
+#     """
+#     Pydantic model for verifying a phone number with an OTP.
+#     """
+#     phone_number: str
+#     otp: str
 
 
-class VerifyPhoneResponse(BaseModel):
-    """
-    Pydantic model for the response after phone verification.
-    """
-    message: str
-    username: str
-    role: str
+# class VerifyPhoneResponse(BaseModel):
+#     """
+#     Pydantic model for the response after phone verification.
+#     """
+#     message: str
+#     username: str
+#     role: str
 
 
-class SendOTPRequest(BaseModel):
-    """
-    Pydantic model for sending an OTP to a phone number.
-    """
-    phone_number: str
+# class SendOTPRequest(BaseModel):
+#     """
+#     Pydantic model for sending an OTP to a phone number.
+#     """
+#     phone_number: str
 
-    @field_validator("phone_number")
-    @classmethod
-    def validate_phone_send_otp(cls, value: str) -> str:
-        """
-        Validates the phone number format for sending OTP.
-        Converts '0xxxxxxxxx' to '+84xxxxxxxxx' if applicable.
-        """
-        # Convert '0xxxxxxxxx' to '+84xxxxxxxxx'
-        if value.startswith("0") and len(value) == 10:
-            value = "+84" + value[1:]
-        # Validate format: must be +84 followed by 9 digits
-        if not (value.startswith("+84") and len(value) == 12 and value[3:].isdigit()):
-            raise ValueError("Phone number must be in format +84xxxxxxxxx (9 digits after +84)")
-        return value
+#     @field_validator("phone_number")
+#     @classmethod
+#     def validate_phone_send_otp(cls, value: str) -> str:
+#         """
+#         Validates the phone number format for sending OTP.
+#         Converts '0xxxxxxxxx' to '+84xxxxxxxxx' if applicable.
+#         """
+#         # Convert '0xxxxxxxxx' to '+84xxxxxxxxx'
+#         if value.startswith("0") and len(value) == 10:
+#             value = "+84" + value[1:]
+#         # Validate format: must be +84 followed by 9 digits
+#         if not (value.startswith("+84") and len(value) == 12 and value[3:].isdigit()):
+#             raise ValueError("Phone number must be in format +84xxxxxxxxx (9 digits after +84)")
+#         return value

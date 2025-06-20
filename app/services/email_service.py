@@ -77,7 +77,7 @@ async def send_reset_password_email(email: str, username: str):
     # base_url = str(base_url).rstrip('/')
     # api_path = settings.API_V1_STR.lstrip('/')
     # reset_link = f"{base_url}/{api_path}/auth/reset-password?token={token}"
-    reset_link = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+    reset_link = f"{settings.FRONTEND_URL}/auth/change-password?token={token}"
 
     
     # Load and render template

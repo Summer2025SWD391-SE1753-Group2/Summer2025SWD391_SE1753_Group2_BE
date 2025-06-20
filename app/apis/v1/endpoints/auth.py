@@ -16,7 +16,8 @@ from app.core.deps import get_db
 from app.db.models.account import Account, AccountStatusEnum
 from app.services.email_service import send_reset_password_email
 # from app.services.otp_service import send_otp, verify_otp
-from app.schemas.account import AccountCreate, AccountOut, SendOTPRequest, VerifyPhoneRequest, VerifyPhoneResponse
+from app.schemas.account import AccountCreate, AccountOut
+# , SendOTPRequest, VerifyPhoneRequest, VerifyPhoneResponse
 from app.services.account_service import create_account as service_create_account
 from app.services.google_auth_service import get_google_token, get_google_user_info, get_or_create_google_account
 
