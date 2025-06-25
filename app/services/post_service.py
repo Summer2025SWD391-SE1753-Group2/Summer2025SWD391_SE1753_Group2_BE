@@ -41,7 +41,7 @@ def search_posts(db: Session, title: str, skip: int = 0, limit: int = 100):
             .limit(limit)\
             .all()
         
-        return [PostOut.from_orm(post) for post in posts]
+        return [PostOut.model_validate(post) for post in posts]
     except Exception as e:
         logger.error(f"Error in search_posts: {str(e)}", exc_info=True)
         raise
@@ -173,7 +173,7 @@ def get_approved_posts(db: Session, skip: int = 0, limit: int = 100) -> List[Pos
             .limit(limit)\
             .all()
 
-        return [PostOut.from_orm(post) for post in posts]
+        return [PostOut.model_validate(post) for post in posts]
 
     except Exception as e:
         logger.error(f"Error in get_approved_posts: {str(e)}", exc_info=True)
@@ -194,7 +194,7 @@ def search_posts_by_topic_name(db: Session, topic_name: str, skip: int = 0, limi
         .limit(limit)\
         .all()
         
-    return [PostOut.from_orm(post) for post in posts]
+    return [PostOut.model_validate(post) for post in posts]
 def search_posts_by_tag_name(db: Session, tag_name: str, skip: int = 0, limit: int = 100):
     """Search posts by tag name with eager loading"""
     posts = db.query(Post)\
@@ -211,7 +211,7 @@ def search_posts_by_tag_name(db: Session, tag_name: str, skip: int = 0, limit: i
         .limit(limit)\
         .all()
         
-    return [PostOut.from_orm(post) for post in posts]
+    return [PostOut.model_validate(post) for post in posts]
 def get_all_posts(db: Session, skip: int = 0, limit: int = 100):
     """Get all posts with eager loading of relationships"""
     try:
@@ -229,7 +229,7 @@ def get_all_posts(db: Session, skip: int = 0, limit: int = 100):
             .all()
 
         # Convert to Pydantic models explicitly
-        return [PostOut.from_orm(post) for post in posts]
+        return [PostOut.model_validate(post) for post in posts]
 
     except Exception as e:
         logger.error(f"Error in get_all_posts: {str(e)}", exc_info=True)
@@ -255,7 +255,7 @@ def get_post_by_id(db: Session, post_id: UUID) -> PostOut:
                 detail="Post not found"
             )
 
-        return PostOut.from_orm(post)
+        return PostOut.model_validate(post)
 
     except HTTPException:
         raise
@@ -280,7 +280,7 @@ def get_my_posts(db: Session, user_id: UUID, skip: int = 0, limit: int = 100) ->
             .all()
 
         # Convert to Pydantic models explicitly
-        return [PostOut.from_orm(post) for post in posts]
+        return [PostOut.model_validate(post) for post in posts]
 
     except Exception as e:
         logger.error(f"Error in get_my_posts: {str(e)}", exc_info=True)

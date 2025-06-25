@@ -21,4 +21,4 @@ class RoleOut(RoleBase):
     role_id: int
 
     class Config:
-        form_attributes = True
+        from_attributes = True
