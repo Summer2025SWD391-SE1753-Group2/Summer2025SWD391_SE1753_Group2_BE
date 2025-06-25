@@ -10,7 +10,7 @@ from .post_topic import post_topic
 from app.db.models.post_material import PostMaterial
 from app.db.models.material import Material
 from app.db.models.topic import Topic
-from app.db.models.postImage import PostImage
+from app.db.models.post_image import PostImage
 from app.db.models.tag import Tag
 from app.db.models.step import Step
 from app.db.models.comment import Comment
