@@ -23,12 +23,12 @@ class PostMaterialOut(BaseModel):
     def from_orm(cls, obj):
         logger.info(f"Converting ORM object to PostMaterialOut: {obj.__dict__}")
         try:
-            return cls(
-                material_id=obj.material.material_id,
-                material_name=obj.material.name,
-                unit=obj.material.unit,
-                quantity=obj.quantity
-            )
+            return cls.model_validate({
+                "material_id": obj.material.material_id,
+                "material_name": obj.material.name,
+                "unit": obj.material.unit,
+                "quantity": obj.quantity
+            })
         except Exception as e:
             logger.error(f"Error converting ORM object: {str(e)}", exc_info=True)
             raise

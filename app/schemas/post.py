@@ -89,17 +89,17 @@ class PostOut(BaseModel):
     @classmethod
     def from_orm(cls, db_obj):
         logger.info(f"Converting post {db_obj.post_id} to PostOut")
-        steps = [StepOut.from_orm(step) for step in sorted(db_obj.steps, key=lambda x: x.order_number)]
+        steps = [StepOut.model_validate(step) for step in sorted(db_obj.steps, key=lambda x: x.order_number)]
         # Convert tags to TagOut
-        tags = [TagOut.from_orm(tag) for tag in db_obj.tags]
+        tags = [TagOut.model_validate(tag) for tag in db_obj.tags]
         logger.info(f"Converted {len(tags)} tags")
 
         # Convert topics to TopicOut
-        topics = [TopicOut.from_orm(topic) for topic in db_obj.topics]
+        topics = [TopicOut.model_validate(topic) for topic in db_obj.topics]
         logger.info(f"Converted {len(topics)} topics")
 
         # Convert images to PostImageOut
-        images = [PostImageOut.from_orm(image) for image in db_obj.images]
+        images = [PostImageOut.model_validate(image) for image in db_obj.images]
         logger.info(f"Converted {len(images)} images")
 
         # Convert materials
@@ -134,7 +134,7 @@ class PostOut(BaseModel):
             "materials": materials
         }
 
-        return cls(**obj_dict)
+        return cls.model_validate(obj_dict)
 
     class Config:
         from_attributes = True
