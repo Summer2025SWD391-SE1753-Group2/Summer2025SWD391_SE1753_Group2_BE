@@ -14,6 +14,8 @@ from app.db.models.post_tag import post_tag
 from app.db.models.group_member import GroupMember
 from app.db.models.favourite import Favourite
 from app.db.models.favourite_post import favourite_posts
+from app.db.models.feedback import Feedback
+from app.db.models.feedback_type import FeedbackType
 
 __all__ = [
     "Account",
@@ -27,5 +29,7 @@ __all__ = [
     "GroupMember",
     "PostImage",
     "Favourite",
-    "favourite_posts"
+    "favourite_posts",
+    "Feedback",
+    "FeedbackType"
 ]
