@@ -542,24 +542,69 @@ async def google_callback_exchange(
 async def google_callback_redirect_to_frontend(
     code: Optional[str] = None,
     error: Optional[str] = None,
-    state: Optional[str] = None
+    state: Optional[str] = None,
+    db: Session = Depends(get_db)
 ):
+    """
+    Handle Google OAuth callback and redirect to frontend with result
+    """
     frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
-
-    redirect_params = []
-    if code:
-        redirect_params.append(f"code={code}")
+    
     if error:
-        redirect_params.append(f"error={error}")
-    if state:
-        redirect_params.append(f"state={state}")
+        # Google OAuth error occurred
+        redirect_url = f"{frontend_url}/auth/google-callback?error={error}"
+        return RedirectResponse(url=redirect_url)
+    
+    if not code:
+        # No authorization code received
+        redirect_url = f"{frontend_url}/auth/google-callback?error=no_code"
+        return RedirectResponse(url=redirect_url)
+    
+    try:
+        # Exchange code for tokens and user info
+        google_token = await get_google_token(code)
+        google_user = await get_google_user_info(google_token.access_token)
+        account = await get_or_create_google_account(db, google_user)
 
-    redirect_url = f"{frontend_url}/auth/google/callback"
-    if redirect_params:
-        redirect_url += "?" + "&".join(redirect_params)
+        # Create JWT tokens
+        access_token_payload = {
+            "sub": account.username,
+            "user_id": str(account.account_id),
+            "role": account.role.role_name if account.role else "user",
+            "scopes": ["me"]
+        }
+        access_token = create_access_token(account, scopes=access_token_payload["scopes"])
 
-    return RedirectResponse(url=redirect_url)
+        refresh_token_payload = {
+            "sub": account.username,
+            "user_id": str(account.account_id),
+            "role": account.role.role_name if account.role else "user",
+            "scopes": ["me"]
+        }
+        refresh_token = TokenService.create_refresh_token(refresh_token_payload)
 
+        TokenService.create_token_record(db, account, access_token, refresh_token)
+
+        # Redirect to frontend with success and tokens
+        redirect_params = [
+            f"success=true",
+            f"access_token={access_token}",
+            f"refresh_token={refresh_token}",
+            f"user_id={account.account_id}",
+            f"username={account.username}",
+            f"email={account.email}",
+            f"full_name={account.full_name or ''}",
+            f"role={account.role.role_name if account.role else 'user'}"
+        ]
+        
+        redirect_url = f"{frontend_url}/auth/google-callback?{'&'.join(redirect_params)}"
+        return RedirectResponse(url=redirect_url)
+
+    except Exception as e:
+        # Handle any errors during token exchange
+        error_msg = str(e).replace(' ', '%20')  # URL encode spaces
+        redirect_url = f"{frontend_url}/auth/google-callback?error={error_msg}"
+        return RedirectResponse(url=redirect_url)
 
 @router.post("/logout")
 async def logout(

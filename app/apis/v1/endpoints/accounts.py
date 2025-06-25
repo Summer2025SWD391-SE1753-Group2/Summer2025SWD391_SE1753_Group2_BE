@@ -121,6 +121,19 @@ def read_account_me(
     """
     return current_account
 
+@router.get("/is-google-user")
+def check_google_user(
+    current_account: Account = Depends(get_current_active_account)
+):
+    """
+    Check if current user is a Google user
+    """
+    return {
+        "is_google_user": is_google_user(current_account),
+        "username": current_account.username,
+        "email": current_account.email
+    }
+
 @router.put("/me", response_model=AccountOut)
 def update_account_me(
     account_update: AccountUpdate,
@@ -226,16 +239,3 @@ def update_username_endpoint(
         account=current_account, 
         new_username=username_update.new_username
     )
-
-@router.get("/is-google-user")
-def check_google_user(
-    current_account: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
-):
-    """
-    Check if current user is a Google user
-    """
-    return {
-        "is_google_user": is_google_user(current_account),
-        "username": current_account.username,
-        "email": current_account.email
-    }
