@@ -45,6 +45,7 @@ class PostCreate(PostBase):
     images: List[str] = []
     steps: List[StepCreate] = []
     created_by: Optional[UUID] = None
+    status: Optional[PostStatusEnum] = None
 
 class PostUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=300)

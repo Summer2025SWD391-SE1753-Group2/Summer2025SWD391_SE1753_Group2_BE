@@ -50,12 +50,13 @@ def search_posts(db: Session, title: str, skip: int = 0, limit: int = 100):
 
 def create_post(db: Session, post_data: PostCreate) -> PostOut:
     try:
-        # Set status based on user role
-        current_user = db.query(Account).filter(Account.account_id == post_data.created_by).first()
-        if current_user and current_user.role.role_name in ["moderator", "admin"]:
-            post_data.status = "approved"
-        else:
-            post_data.status = "waiting"
+        # Set status based on user role if not provided by frontend
+        if post_data.status is None:
+            current_user = db.query(Account).filter(Account.account_id == post_data.created_by).first()
+            if current_user and current_user.role.role_name in ["moderator", "admin"]:
+                post_data.status = PostStatusEnum.approved
+            else:
+                post_data.status = PostStatusEnum.waiting
 
         # Validate required fields
         if not post_data.topic_ids:
@@ -86,19 +87,16 @@ def create_post(db: Session, post_data: PostCreate) -> PostOut:
                 detail="Creator not found"
             )
 
-        # Set status based on creator's role
-        status = PostStatusEnum.approved if creator.role.role_name in [RoleNameEnum.moderator, RoleNameEnum.admin] else PostStatusEnum.waiting
-
         post = Post(
             title=post_data.title,
             content=post_data.content,
-            status=status,
+            status=post_data.status,
             created_by=post_data.created_by,
             updated_by=post_data.created_by,
         )
 
-        # If creator is moderator/admin, set approved_by
-        if status == PostStatusEnum.approved:
+        # If status is approved, set approved_by
+        if post_data.status == PostStatusEnum.approved:
             post.approved_by = post_data.created_by
 
         db.add(post)
