@@ -3,6 +3,7 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 from enum import Enum
+from app.schemas.common import AccountSummary
 
 class FeedbackStatusEnum(str, Enum):
     pending = "pending"
@@ -42,14 +43,6 @@ class FeedbackUpdate(BaseModel):
 class FeedbackResolution(BaseModel):
     status: FeedbackStatusEnum = Field(..., description="New status (resolved/rejected)")
     resolution_note: str = Field(..., min_length=5, description="Explanation of resolution")
-
-class AccountSummary(BaseModel):
-    account_id: UUID
-    username: str
-    full_name: Optional[str] = None
-    avatar: Optional[str] = None
-
-    model_config = ConfigDict(from_attributes=True)
 
 class FeedbackTypeSummary(BaseModel):
     feedback_type_id: UUID

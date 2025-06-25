@@ -3,6 +3,7 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 from enum import Enum
+from app.schemas.common import AccountSummary
 
 class FeedbackTypeStatusEnum(str, Enum):
     active = "active"
@@ -27,14 +28,6 @@ class FeedbackTypeUpdate(BaseModel):
     status: Optional[FeedbackTypeStatusEnum] = None
     sort_order: Optional[str] = None
     updated_by: Optional[UUID] = None
-
-class AccountSummary(BaseModel):
-    account_id: UUID
-    username: str
-    full_name: Optional[str] = None
-    avatar: Optional[str] = None
-
-    model_config = ConfigDict(from_attributes=True)
 
 class FeedbackTypeOut(FeedbackTypeBase):
     feedback_type_id: UUID

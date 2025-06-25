@@ -8,7 +8,7 @@ from app.core.deps import get_db
 from app.schemas.feedback import (
     FeedbackCreate, FeedbackUpdate, FeedbackResolution, 
     FeedbackOut, FeedbackList, FeedbackStatusEnum, 
-    FeedbackTypeEnum, FeedbackPriorityEnum
+    FeedbackPriorityEnum
 )
 from app.services.feedback_service import (
     create_feedback, get_feedback_by_id, get_user_feedbacks,
@@ -64,7 +64,7 @@ def get_all_feedbacks_endpoint(
     skip: int = Query(0, ge=0, description="Number of feedbacks to skip"),
     limit: int = Query(10, ge=1, le=100, description="Number of feedbacks to return"),
     status_filter: Optional[FeedbackStatusEnum] = Query(None, description="Filter by status"),
-    type_filter: Optional[FeedbackTypeEnum] = Query(None, description="Filter by type"),
+    type_filter: Optional[UUID] = Query(None, description="Filter by feedback type ID"),
     priority_filter: Optional[FeedbackPriorityEnum] = Query(None, description="Filter by priority"),
     db: Session = Depends(get_db),
     current_user: Account = Depends(check_roles([RoleNameEnum.moderator, RoleNameEnum.admin]))

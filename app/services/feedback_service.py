@@ -8,7 +8,7 @@ from app.db.models.feedback import Feedback, FeedbackStatusEnum, FeedbackPriorit
 from app.db.models.feedback_type import FeedbackType, FeedbackTypeStatusEnum
 from app.db.models.account import Account
 from app.schemas.feedback import FeedbackCreate, FeedbackUpdate, FeedbackResolution, FeedbackOut, FeedbackList
-from app.schemas.account import AccountSummary
+from app.schemas.common import AccountSummary
 
 def create_feedback(db: Session, feedback_data: FeedbackCreate, user_id: UUID) -> FeedbackOut:
     """Create a new feedback entry"""
