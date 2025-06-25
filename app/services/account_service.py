@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app.db.models.account import Account, AccountStatusEnum
 from app.schemas.account import AccountCreate, AccountUpdate
-from app.core.security import get_password_hash
+from app.core.security import get_password_hash, verify_password
 from fastapi import HTTPException
 from sqlalchemy import text
 from typing import List, Optional
@@ -223,6 +223,76 @@ async def update_account_profile(db: Session, account: Account, profile_update: 
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+
+
+def update_password(db: Session, account: Account, new_password: str, current_password: Optional[str] = None) -> Account:
+    """
+    Updates an account's password.
+    For Google users, current_password is optional.
+    For regular users, current_password is required.
+    """
+    try:
+        # For non-Google users, verify current password
+        if not account.username.startswith("google_") and current_password:
+            if not verify_password(current_password, account.password_hash):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Current password is incorrect"
+                )
+        
+        # Hash and update the new password
+        hashed_password = get_password_hash(new_password)
+        account.password_hash = hashed_password
+        account.updated_at = datetime.now()
+        
+        db.commit()
+        db.refresh(account)
+        return account
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+def update_username(db: Session, account: Account, new_username: str) -> Account:
+    """
+    Updates an account's username.
+    Checks for uniqueness and handles Google user username updates.
+    """
+    try:
+        # Check if new username is already in use
+        existing_username = db.query(Account).filter(
+            Account.username == new_username,
+            Account.account_id != account.account_id
+        ).first()
+        if existing_username:
+            raise HTTPException(
+                status_code=400,
+                detail="Username already in use"
+            )
+        
+        # Update username
+        account.username = new_username
+        account.updated_at = datetime.now()
+        
+        db.commit()
+        db.refresh(account)
+        return account
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+def is_google_user(account: Account) -> bool:
+    """
+    Checks if an account was created via Google OAuth.
+    """
+    return account.username.startswith("google_")
 
 
 async def get_account_profile(db: Session, username: str) -> Account:

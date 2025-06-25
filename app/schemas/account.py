@@ -216,6 +216,54 @@ class AccountUpdate(BaseModel):
             raise ValueError(str(e))
 
 
+class PasswordUpdateRequest(BaseModel):
+    """
+    Pydantic model for updating password (for Google users or regular users).
+    """
+    current_password: Optional[str] = None  # Optional for Google users
+    new_password: str = Field(..., min_length=8, example="NewSecurePassword@123")
+    confirm_password: str = Field(..., min_length=8, example="NewSecurePassword@123")
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, value: str) -> str:
+        """
+        Validates the new password.
+        """
+        try:
+            return validate_password(value)
+        except Exception as e:
+            raise ValueError(str(e))
+
+    @field_validator("confirm_password")
+    @classmethod
+    def validate_confirm_password(cls, value: str, info) -> str:
+        """
+        Validates that confirm password matches new password.
+        """
+        if value != info.data.get("new_password"):
+            raise ValueError("Passwords do not match")
+        return value
+
+
+class UsernameUpdateRequest(BaseModel):
+    """
+    Pydantic model for updating username (for Google users).
+    """
+    new_username: str = Field(..., min_length=3, max_length=100, example="new_username")
+
+    @field_validator("new_username")
+    @classmethod
+    def validate_new_username(cls, value: str) -> str:
+        """
+        Validates the new username.
+        """
+        try:
+            return validate_username(value)
+        except Exception as e:
+            raise ValueError(str(e))
+
+
 class AccountOut(AccountBase):
     """
     Pydantic model for outputting full account details.
