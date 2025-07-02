@@ -80,11 +80,24 @@ def get_friends(db: Session, account_id: UUID) -> List[Account]:
     
     return friends
 
-def get_pending_requests(db: Session, account_id: UUID) -> List[Friend]:
-    return db.query(Friend).filter(
+def get_pending_requests(db: Session, account_id: UUID):
+    # Join with Account to get sender information
+    pending_requests = db.query(Friend, Account).join(
+        Account, Friend.sender_id == Account.account_id
+    ).filter(
         Friend.receiver_id == account_id,
         Friend.status == FriendStatusEnum.pending
     ).all()
+    
+    # Transform to include both friend request and sender account info
+    result = []
+    for friend_request, sender_account in pending_requests:
+        result.append({
+            "friend_request": friend_request,
+            "sender": sender_account
+        })
+    
+    return result
 def remove_friend_service(db: Session, account_id: UUID, friend_id: UUID):
     friendship = db.query(Friend).filter(
         ((Friend.sender_id == account_id) & (Friend.receiver_id == friend_id)) |
@@ -98,3 +111,26 @@ def remove_friend_service(db: Session, account_id: UUID, friend_id: UUID):
     db.delete(friendship)
     db.commit()
     return {"message": "Friend removed successfully"}
+
+def get_friendship_status(db: Session, account_id: UUID, friend_id: UUID):
+    """Check the friendship status between two users"""
+    if account_id == friend_id:
+        return {"status": "self", "can_send_request": False}
+    
+    friendship = db.query(Friend).filter(
+        ((Friend.sender_id == account_id) & (Friend.receiver_id == friend_id)) |
+        ((Friend.sender_id == friend_id) & (Friend.receiver_id == account_id))
+    ).first()
+    
+    if not friendship:
+        return {"status": "none", "can_send_request": True}
+    
+    if friendship.status == FriendStatusEnum.accepted:
+        return {"status": "friends", "can_send_request": False}
+    elif friendship.status == FriendStatusEnum.pending:
+        if friendship.sender_id == account_id:
+            return {"status": "request_sent", "can_send_request": False}
+        else:
+            return {"status": "request_received", "can_send_request": False}
+    else:  # rejected
+        return {"status": "rejected", "can_send_request": True}
