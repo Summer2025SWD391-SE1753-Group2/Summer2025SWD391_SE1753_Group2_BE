@@ -7,6 +7,7 @@ from app.db.models.favourite_post import favourite_posts
 from app.db.models.friend import Friend
 from app.db.models.group import Group
 from app.db.models.group_member import GroupMember
+from app.db.models.group_message import GroupMessage
 from app.db.models.material import Material
 from app.db.models.post_material import PostMaterial
 from app.db.models.post_image import PostImage
@@ -31,6 +32,7 @@ __all__ = [
     "Friend",
     "Group",
     "GroupMember",
+    "GroupMessage",
     "Material",
     "PostMaterial",
     "PostImage",

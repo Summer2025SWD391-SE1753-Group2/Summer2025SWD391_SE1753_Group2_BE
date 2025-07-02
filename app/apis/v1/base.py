@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.apis.v1.endpoints import roles, accounts, auth, tags, materials, topics, posts, units, groups, group_members, comments, favourites, friend, feedback, feedback_types, chat
+from app.apis.v1.endpoints import roles, accounts, auth, tags, materials, topics, posts, units, groups, group_members, comments, favourites, friend, feedback, feedback_types, chat, group_chat
 
 
 api_router = APIRouter()
@@ -19,3 +19,4 @@ api_router.include_router(friend.router, prefix="/friends", tags=["Friends"])
 api_router.include_router(feedback.router, prefix="/feedback", tags=["Feedback"])
 api_router.include_router(feedback_types.router, prefix="/feedback-types", tags=["Feedback Types"])
 api_router.include_router(chat.router, prefix="/chat", tags=["Chat"])
+api_router.include_router(group_chat.router, prefix="/group-chat", tags=["Group Chat"])

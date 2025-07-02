@@ -122,3 +122,11 @@ class Account(Base):
         back_populates="receiver",
         cascade="all, delete-orphan"
     )
+    
+    # Liên kết với GroupMessage
+    group_messages_sent = relationship(
+        "GroupMessage",
+        foreign_keys="GroupMessage.sender_id",
+        back_populates="sender",
+        cascade="all, delete-orphan"
+    )

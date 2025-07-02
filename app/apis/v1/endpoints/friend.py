@@ -57,22 +57,35 @@ def list_pending_requests(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_account)
 ):
-    pending = get_pending_requests(db, current_user.account_id)
-    result = []
-    for req in pending:
-        sender_obj = db.query(Account).filter_by(account_id=req.sender_id).first()
-        sender = None
-        if sender_obj:
-            sender = {
-                "account_id": sender_obj.account_id,
-                "username": sender_obj.username,
-                "full_name": sender_obj.full_name,
-                "avatar": sender_obj.avatar
-            }
-        req_dict = req.__dict__.copy()
-        req_dict["sender"] = sender
-        result.append(req_dict)
-    return result
+    try:
+        pending = get_pending_requests(db, current_user.account_id)
+        print(f"Debug: Found {len(pending)} pending requests for user {current_user.account_id}")
+        
+        result = []
+        for item in pending:
+            friend_request = item["friend_request"]
+            sender_account = item["sender"]
+            
+            pending_request = PendingFriendRequest(
+                sender_id=friend_request.sender_id,
+                receiver_id=friend_request.receiver_id,
+                status=friend_request.status,
+                created_at=friend_request.created_at,
+                updated_at=friend_request.updated_at,
+                sender={
+                    "account_id": sender_account.account_id,
+                    "username": sender_account.username,
+                    "full_name": sender_account.full_name,
+                    "avatar": sender_account.avatar
+                }
+            )
+            result.append(pending_request)
+        
+        print(f"Debug: Returning {len(result)} pending requests")
+        return result
+    except Exception as e:
+        print(f"Error in list_pending_requests: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @router.delete("/{friend_id}", 
               summary="Remove friend",
@@ -115,3 +128,16 @@ def update_friend_nickname(
     """Cập nhật nickname cho bạn bè trong đoạn chat 1-1"""
     friend = update_nickname(db, current_user.account_id, friend_id, nickname)
     return friend
+
+@router.get("/test-access")
+def test_friend_access(
+    current_user = Depends(get_current_active_account)
+):
+    """Test endpoint to check if user can access friend APIs"""
+    return {
+        "user_id": str(current_user.account_id),
+        "username": current_user.username,
+        "role": current_user.role.role_name if current_user.role else None,
+        "status": "active",
+        "message": "User can access friend APIs"
+    }
