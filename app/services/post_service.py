@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from uuid import UUID
 from app.db.models.post import Post
-from app.db.models.postImage import PostImage
+from app.db.models.post_image import PostImage
 from app.db.models.tag import Tag
 from app.db.models.material import Material
 from app.db.models.topic import Topic
