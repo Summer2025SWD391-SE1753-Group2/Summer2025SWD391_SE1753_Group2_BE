@@ -22,6 +22,14 @@ class FriendResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class SenderSummary(BaseModel):
+    account_id: UUID
+    username: str
+    full_name: Optional[str] = None
+    avatar: Optional[str] = None
+
+class FriendPendingWithSender(BaseModel):
+=======
 # Schema for Account info in friend requests
 class SenderAccountInfo(BaseModel):
     account_id: UUID
@@ -40,6 +48,8 @@ class PendingFriendRequest(BaseModel):
     status: FriendStatusEnum
     created_at: datetime
     updated_at: datetime
+    sender: Optional[SenderSummary]
+=======
     sender: SenderAccountInfo
 
     class Config:
