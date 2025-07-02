@@ -98,6 +98,7 @@ def get_pending_requests(db: Session, account_id: UUID):
         })
     
     return result
+
 def remove_friend_service(db: Session, account_id: UUID, friend_id: UUID):
     friendship = db.query(Friend).filter(
         ((Friend.sender_id == account_id) & (Friend.receiver_id == friend_id)) |
@@ -134,3 +135,54 @@ def get_friendship_status(db: Session, account_id: UUID, friend_id: UUID):
             return {"status": "request_received", "can_send_request": False}
     else:  # rejected
         return {"status": "rejected", "can_send_request": True}
+
+def update_nickname(db, user_id, friend_id, nickname: str):
+    """Cập nhật nickname cho bạn bè. Nếu user là sender thì cập nhật sender_nickname, nếu là receiver thì cập nhật receiver_nickname."""
+    from app.db.models.friend import Friend
+    friend = db.query(Friend).filter(
+        ((Friend.sender_id == user_id) & (Friend.receiver_id == friend_id)) |
+        ((Friend.sender_id == friend_id) & (Friend.receiver_id == user_id))
+    ).first()
+    if not friend:
+        raise Exception("Friend relationship not found")
+    if friend.sender_id == user_id:
+        friend.sender_nickname = nickname
+    elif friend.receiver_id == user_id:
+        friend.receiver_nickname = nickname
+    else:
+        raise Exception("User is not part of this friendship")
+    db.commit()
+    db.refresh(friend)
+    return friend
+
+def get_friends_with_nickname(db: Session, account_id: UUID) -> List[dict]:
+    """Get friends list with nickname information"""
+    # Query friends with nickname info
+    friends_data = db.query(Account, Friend).join(
+        Friend, 
+        (
+            ((Friend.sender_id == account_id) & (Friend.receiver_id == Account.account_id)) |
+            ((Friend.receiver_id == account_id) & (Friend.sender_id == Account.account_id))
+        )
+    ).filter(Friend.status == FriendStatusEnum.accepted).all()
+    
+    result = []
+    for account, friend in friends_data:
+        # Determine which nickname to use based on user's position in friendship
+        nickname = None
+        if friend.sender_id == account_id:
+            nickname = friend.sender_nickname
+        else:
+            nickname = friend.receiver_nickname
+            
+        friend_info = {
+            "account_id": account.account_id,
+            "username": account.username,
+            "full_name": account.full_name,
+            "email": account.email,
+            "avatar": account.avatar,
+            "nickname": nickname  # Add nickname field
+        }
+        result.append(friend_info)
+    
+    return result

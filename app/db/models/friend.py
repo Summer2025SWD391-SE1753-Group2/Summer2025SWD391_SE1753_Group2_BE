@@ -19,6 +19,8 @@ class Friend(Base):
     status = Column(Enum(FriendStatusEnum), nullable=False, default=FriendStatusEnum.pending)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    sender_nickname = Column('sender_nickname', nullable=True)
+    receiver_nickname = Column('receiver_nickname', nullable=True)
 
     sender = relationship("Account", foreign_keys=[sender_id], back_populates="friends_sent")
     receiver = relationship("Account", foreign_keys=[receiver_id], back_populates="friends_received")
