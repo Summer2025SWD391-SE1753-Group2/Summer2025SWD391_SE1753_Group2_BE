@@ -4,6 +4,7 @@ from uuid import UUID
 from typing import Optional
 import json
 import logging
+import asyncio
 
 from app.db.models.account import Account
 from app.core.deps import get_db
@@ -201,7 +202,20 @@ def mark_message_as_read_endpoint(
     current_user: Account = Depends(check_roles([RoleNameEnum.user]))
 ):
     """Mark a message as read"""
-    return mark_message_as_read(db, message_id, current_user.account_id)
+    message = mark_message_as_read(db, message_id, current_user.account_id)
+    # Gửi sự kiện message_read qua WebSocket cho sender nếu đang online
+    try:
+        if manager.is_user_online(message.sender_id):
+            asyncio.create_task(
+                manager.send_personal_message({
+                    "type": "message_read",
+                    "message_id": str(message_id),
+                    "read_by": str(current_user.account_id)
+                }, message.sender_id)
+            )
+    except Exception as e:
+        logger.error(f"Failed to send message_read via WebSocket: {e}")
+    return message
 
 @router.delete("/messages/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_message_endpoint(
