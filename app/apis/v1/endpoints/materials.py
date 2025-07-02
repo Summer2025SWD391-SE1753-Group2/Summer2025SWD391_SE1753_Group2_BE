@@ -42,7 +42,8 @@ def get_material_by_id_endpoint(material_id: UUID, db: Session = Depends(get_db)
 
 @router.get("/", response_model=List[MaterialOut])
 def get_all_materials_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return get_all_materials(db, skip=skip, limit=limit)
+    materials = get_all_materials(db, skip=skip, limit=limit)
+    return [MaterialOut.from_orm(m) for m in materials]
 
 
 @router.put("/{material_id}", response_model=MaterialOut)

@@ -9,6 +9,7 @@ class PostMaterial(Base):
     post_id = Column(UUID(as_uuid=True), ForeignKey("post.post_id"), primary_key=True)
     material_id = Column(UUID(as_uuid=True), ForeignKey("material.material_id"), primary_key=True)
     quantity = Column(Float, nullable=False)
+    unit = Column(String(50), nullable=False)
 
     # Add relationships
     post = relationship("Post", back_populates="post_materials")

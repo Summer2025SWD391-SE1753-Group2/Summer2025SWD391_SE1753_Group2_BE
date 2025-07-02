@@ -87,6 +87,7 @@ def create_post(db: Session, post_data: PostCreate) -> PostOut:
                 detail="Creator not found"
             )
 
+        # Tạo post và flush để lấy post_id
         post = Post(
             title=post_data.title,
             content=post_data.content,
@@ -94,17 +95,13 @@ def create_post(db: Session, post_data: PostCreate) -> PostOut:
             created_by=post_data.created_by,
             updated_by=post_data.created_by,
         )
-
-        # If status is approved, set approved_by
-        if post_data.status == PostStatusEnum.approved:
-            post.approved_by = post_data.created_by
-
         db.add(post)
-        db.commit()
-        db.refresh(post)
+        db.flush()  # Lấy post_id
 
         # Handle materials with quantities
         if post_data.materials:
+            post_materials = []
+            inserted_material_ids = []
             for material_data in post_data.materials:
                 # Verify material exists
                 material = db.query(Material).filter(
@@ -115,14 +112,19 @@ def create_post(db: Session, post_data: PostCreate) -> PostOut:
                         status_code=400,
                         detail=f"Material {material_data.material_id} not found"
                     )
-
-                # Create PostMaterial entry using material's fixed unit
                 post_material = PostMaterial(
                     post_id=post.post_id,
                     material_id=material_data.material_id,
-                    quantity=material_data.quantity
+                    quantity=material_data.quantity,
+                    unit=material.unit.name if hasattr(material.unit, 'name') else (material.unit if isinstance(material.unit, str) else None)
                 )
-                db.add(post_material)
+                post_materials.append(post_material)
+                inserted_material_ids.append(str(material_data.material_id))
+                db.add(post_material)  # <-- Add từng PostMaterial vào session
+            post.post_materials = post_materials  # Gán vào quan hệ ORM
+            # Log số lượng và id các material đã insert
+            from app.db.models.post_material import PostMaterial as PM
+            logger.info(f"Prepared {len(post_materials)} PostMaterial for post_id={post.post_id}, material_ids={inserted_material_ids}")
 
         # Handle other relationships (tags, topics, images)
         if post_data.tag_ids:
@@ -147,8 +149,14 @@ def create_post(db: Session, post_data: PostCreate) -> PostOut:
                 )
                 db.add(step)
 
+        # Nếu status là approved, set approved_by
+        if post_data.status == PostStatusEnum.approved:
+            post.approved_by = post_data.created_by
+
         db.commit()
-        db.refresh(post)
+        # Debug: Query lại post_materials trực tiếp
+        pm_list = db.query(PostMaterial).filter(PostMaterial.post_id == post.post_id).all()
+        logger.info(f"PostMaterial in DB after commit: {[(pm.material_id, pm.quantity, pm.unit) for pm in pm_list]}")
         return get_post_by_id(db, post.post_id)
 
     except Exception as e:
@@ -226,8 +234,8 @@ def get_all_posts(db: Session, skip: int = 0, limit: int = 100):
             .limit(limit)\
             .all()
 
-        # Convert to Pydantic models explicitly
-        return [PostOut.model_validate(post) for post in posts]
+        # Convert to Pydantic models explicitly using from_db_model
+        return [PostOut.from_db_model(post) for post in posts]
 
     except Exception as e:
         logger.error(f"Error in get_all_posts: {str(e)}", exc_info=True)
@@ -253,13 +261,21 @@ def get_post_by_id(db: Session, post_id: UUID) -> PostOut:
                 detail="Post not found"
             )
 
-        return PostOut.model_validate(post)
+        logger.info(f"Loaded post_materials: {[(pm.material_id, getattr(pm, 'material', None)) for pm in getattr(post, 'post_materials', [])]}")
+        return PostOut.from_db_model(post)  # Changed from from_orm to from_db_model
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error in get_post_by_id: {str(e)}", exc_info=True)
         raise
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in get_post_by_id: {str(e)}", exc_info=True)
+        raise
+
 def get_my_posts(db: Session, user_id: UUID, skip: int = 0, limit: int = 100) -> list[PostOut]:
     """Get all posts created by a specific user with eager loading of relationships"""
     try:
@@ -386,7 +402,8 @@ def update_post(db: Session, post_id: UUID, post_data: PostUpdate) ->  PostOut:
                 post_material = PostMaterial(
                     post_id=post.post_id,
                     material_id=material_data.material_id,
-                    quantity=material_data.quantity
+                    quantity=material_data.quantity,
+                    unit=material.unit.name if hasattr(material.unit, 'name') else (material.unit if isinstance(material.unit, str) else None)
                 )
                 db.add(post_material)
         # Update images
@@ -463,9 +480,26 @@ def moderate_post(db: Session, post_id: UUID, moderation_data: PostModeration) -
         else:
             post.rejection_reason = None
 
+        # db.commit()
+        # db.refresh(post)
+        # return get_post_by_id(db, post_id)
+                # Commit changes
         db.commit()
-        db.refresh(post)
-        return get_post_by_id(db, post_id)
+        
+        # Verify materials were saved correctly
+        post_materials = db.query(PostMaterial).filter(
+            PostMaterial.post_id == post.post_id
+        ).options(
+            joinedload(PostMaterial.material)
+        ).all()
+        
+        logger.info(f"Saved {len(post_materials)} materials for post {post.post_id}")
+        for pm in post_materials:
+            logger.info(f"Material {pm.material_id}, quantity={pm.quantity}, unit={pm.unit}")
+            logger.info(f"Material loaded: {pm.material is not None}")
+        
+        # Return the post with all relationships
+        return get_post_by_id(db, post.post_id)
 
     except Exception as e:
         db.rollback()

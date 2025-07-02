@@ -40,7 +40,7 @@ class Post(Base):
     steps = relationship("Step", back_populates="post", cascade="all, delete-orphan",order_by="Step.order_number")
     topics = relationship("Topic", secondary=post_topic, back_populates="posts")
     images = relationship("PostImage", back_populates="post", cascade="all, delete-orphan")
-    post_materials = relationship("PostMaterial", back_populates="post", cascade="all, delete-orphan")
+    post_materials = relationship("PostMaterial", back_populates="post", cascade="all, delete-orphan", lazy="joined")
     comments = relationship(Comment, back_populates="post", cascade="all, delete-orphan")
     favourites = relationship("Favourite", secondary="favourite_posts", back_populates="posts")
     
