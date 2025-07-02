@@ -195,4 +195,44 @@ def update_user_friends_in_manager(db: Session, user_id: UUID):
     
     friends = get_friends(db, user_id)
     friend_ids = [friend.account_id for friend in friends]
-    manager.update_user_friends(user_id, friend_ids) 
+    manager.update_user_friends(user_id, friend_ids)
+
+def search_chat_messages(
+    db: Session,
+    user_id: UUID,
+    friend_id: UUID,
+    keyword: str,
+    skip: int = 0,
+    limit: int = 50
+) -> MessageList:
+    """Search chat messages between two friends by keyword"""
+    # Check if they are friends
+    friendship = db.query(Friend).filter(
+        ((Friend.sender_id == user_id) & (Friend.receiver_id == friend_id)) |
+        ((Friend.sender_id == friend_id) & (Friend.receiver_id == user_id)),
+        Friend.status == FriendStatusEnum.accepted
+    ).first()
+    if not friendship:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only search chat messages with your friends"
+        )
+    # Search messages between the two users containing the keyword
+    query = db.query(Message).options(
+        joinedload(Message.sender),
+        joinedload(Message.receiver)
+    ).filter(
+        (((Message.sender_id == user_id) & (Message.receiver_id == friend_id)) |
+         ((Message.sender_id == friend_id) & (Message.receiver_id == user_id))),
+        Message.is_deleted == False,
+        Message.content.ilike(f"%{keyword}%")
+    )
+    total = query.count()
+    messages = query.order_by(Message.created_at.desc()).offset(skip).limit(limit).all()
+    message_outs = [MessageOut.model_validate(message) for message in messages]
+    return MessageList(
+        messages=message_outs,
+        total=total,
+        skip=skip,
+        limit=limit
+    ) 

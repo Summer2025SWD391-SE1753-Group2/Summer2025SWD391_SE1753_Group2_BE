@@ -14,7 +14,7 @@ from app.schemas.message import MessageCreate, MessageOut, MessageList, ChatHist
 from app.schemas.common import AccountSummary
 from app.services.message_service import (
     send_message, get_chat_history, mark_message_as_read, 
-    delete_message, get_unread_message_count, update_user_friends_in_manager
+    delete_message, get_unread_message_count, update_user_friends_in_manager, search_chat_messages
 )
 from app.services.friend_service import get_friends
 from app.schemas.account import RoleNameEnum
@@ -243,6 +243,18 @@ def get_online_friends_endpoint(
     """Get list of online friends"""
     online_friends = manager.get_online_friends(current_user.account_id)
     return {"online_friends": [str(friend_id) for friend_id in online_friends]}
+
+@router.get("/messages/search/{friend_id}", response_model=MessageList)
+def search_chat_messages_endpoint(
+    friend_id: UUID,
+    keyword: str = Query(..., min_length=1, max_length=100, description="Keyword to search in messages"),
+    skip: int = Query(0, ge=0, description="Number of messages to skip"),
+    limit: int = Query(50, ge=1, le=100, description="Number of messages to return"),
+    db: Session = Depends(get_db),
+    current_user: Account = Depends(check_roles([RoleNameEnum.user]))
+):
+    """Search chat messages with a friend by keyword"""
+    return search_chat_messages(db, current_user.account_id, friend_id, keyword, skip=skip, limit=limit)
 
 # Import SessionLocal for WebSocket endpoint
 from app.db.database import SessionLocal 
