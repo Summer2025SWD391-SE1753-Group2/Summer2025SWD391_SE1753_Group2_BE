@@ -12,3 +12,6 @@ python-multipart
 fastapi-mail
 httpx
 requests
+uvicorn[standard]
+websockets
+wsproto

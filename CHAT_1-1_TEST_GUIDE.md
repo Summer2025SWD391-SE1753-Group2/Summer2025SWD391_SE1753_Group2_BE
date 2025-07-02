@@ -217,3 +217,190 @@
 ---
 
 Nếu cần ví dụ cụ thể về request/response hoặc muốn hướng dẫn bằng tiếng Anh, hãy báo lại nhé!
+
+## 8. Lấy và hiển thị nhiều tin nhắn cũ hơn (phân trang/lazy load)
+
+### API lấy lịch sử chat hỗ trợ phân trang
+
+- **Endpoint:** `GET /api/v1/chat/messages/history/{friend_id}?skip=0&limit=50`
+- **Headers:** `Authorization: Bearer <access_token>`
+- **Giải thích:**
+  - `skip`: Số lượng tin nhắn bỏ qua (dùng cho phân trang/lazy load khi scroll lên trên).
+  - `limit`: Số lượng tin nhắn muốn lấy mỗi lần (ví dụ: 20, 50, 100).
+- **Response mẫu:**
+  ```json
+  {
+    "messages": [
+      // ... danh sách tin nhắn (mới nhất trước)
+    ],
+    "total": 123,
+    "skip": 0,
+    "limit": 50
+  }
+  ```
+
+### FE cần làm gì?
+
+- Khi user scroll lên đầu khung chat, FE gọi lại API với `skip = số tin nhắn đã có`, `limit = số muốn lấy thêm`.
+- FE nối thêm các tin nhắn cũ vào đầu danh sách hiện tại.
+- Nên có scroll bar cho khung chat để user xem lại lịch sử cũ.
+- Khi chuyển sang bạn bè khác, FE gọi API với `friend_id` tương ứng để lấy lịch sử chat riêng từng người.
+- Mỗi bạn bè sẽ có lịch sử chat riêng biệt, không lẫn lộn.
+
+### Gợi ý UI/UX:
+
+- Khung chat nên có scroll bar dọc.
+- Khi kéo lên trên cùng, tự động load thêm tin nhắn cũ (nếu còn).
+- Hiển thị tổng số tin nhắn hoặc thông báo "Đã hết lịch sử" nếu không còn tin nhắn cũ.
+- Khi chuyển bạn chat, clear khung chat cũ và load lịch sử mới theo `friend_id`.
+
+---
+
+## 9. Giữ nguyên đoạn chat khi reload trang (không bị nhảy ra ngoài)
+
+### 1. Sử dụng URL động cho từng đoạn chat
+
+- Khi user chọn bạn bè để chat, FE điều hướng tới URL dạng:
+  ```
+  /chat/{friend_id}
+  ```
+- Ví dụ:
+  - Chat với bạn A: `/chat/123e4567-e89b-12d3-a456-426614174000`
+  - Chat với bạn B: `/chat/987e6543-e21b-12d3-a456-426614174999`
+- Khi reload, FE đọc được `friend_id` từ URL và tự động load lại đúng đoạn chat.
+
+### 2. FE tự động load lại lịch sử chat khi reload
+
+- Khi component chat mount (hoặc khi URL `friend_id` thay đổi):
+  1. Lấy `friend_id` từ URL.
+  2. Gọi API lấy lịch sử chat với friend đó.
+  3. Kết nối lại WebSocket nếu cần.
+
+**Ví dụ React:**
+
+```jsx
+import { useParams } from "react-router-dom";
+
+function ChatScreen() {
+  const { friendId } = useParams();
+
+  useEffect(() => {
+    if (friendId) {
+      // Gọi API lấy lịch sử chat với friendId
+      // Kết nối lại WebSocket nếu cần
+    }
+  }, [friendId]);
+}
+```
+
+### 3. Giữ trạng thái UI khi reload
+
+- Nếu có sidebar/danh sách bạn bè, khi reload nên tự động highlight bạn bè đang chat dựa vào `friend_id` trên URL.
+- Nếu dùng Redux/Context, có thể sync lại state từ URL.
+
+### 4. (Tùy chọn) Lưu trạng thái vào localStorage/sessionStorage
+
+- Nếu muốn giữ thêm các trạng thái UI khác (ví dụ: vị trí scroll, draft message...), có thể lưu vào localStorage.
+- Khi reload, đọc lại và khôi phục.
+
+### 5. Tóm tắt luồng chuẩn
+
+1. User chọn bạn bè để chat → FE điều hướng tới `/chat/{friend_id}`.
+2. FE đọc URL, lấy `friend_id`, gọi API lấy lịch sử chat, kết nối WebSocket.
+3. User reload trang → FE vẫn ở `/chat/{friend_id}`, tự động load lại đúng đoạn chat.
+4. Chuyển bạn chat → FE đổi URL, load lại lịch sử chat mới.
+
+### 6. Gợi ý cho BE
+
+- Không cần thay đổi gì, chỉ cần API `/api/v1/chat/messages/history/{friend_id}` hoạt động đúng.
+
+### 7. Gợi ý cho FE
+
+- Nếu chưa có router động, hãy bổ sung.
+- Nếu đã có, chỉ cần đảm bảo khi reload, FE đọc đúng `friend_id` từ URL và load lại chat.
+
+---
+
+## 10. Vấn đề mất tin nhắn khi chat nhiều và cách tối ưu
+
+### Hiện tượng
+
+- Khi số lượng tin nhắn nhiều, mỗi lần gửi hoặc reload, lịch sử chat với từng bạn bè bị mất/bị thiếu tin nhắn cũ.
+
+### Nguyên nhân thường gặp
+
+1. **FE chỉ giữ một phần tin nhắn (ví dụ: 50 tin mới nhất), khi gửi tin mới thì replace toàn bộ list, làm mất các tin cũ đã load trước đó.**
+2. **Khi load thêm tin nhắn cũ (scroll lên), FE không nối (prepend) đúng vào đầu danh sách, hoặc bị ghi đè.**
+3. **Khi chuyển bạn chat, state không clear đúng, hoặc không lưu riêng biệt lịch sử từng bạn.**
+4. **API trả về tin nhắn không đúng thứ tự, hoặc không phân trang chuẩn (ví dụ: luôn trả về 50 tin mới nhất, không trả về các tin cũ hơn khi skip tăng lên).**
+
+### Cách tối ưu & khắc phục
+
+#### 1. FE phải lưu lịch sử chat riêng cho từng bạn bè
+
+- Sử dụng object/map:
+  ```js
+  {
+    friendId1: [msg1, msg2, ...],
+    friendId2: [msgA, msgB, ...],
+    ...
+  }
+  ```
+- Khi chuyển bạn chat, chỉ hiển thị list của friendId tương ứng.
+
+#### 2. Khi gửi tin nhắn mới
+
+- **Không replace toàn bộ list!**
+- Thêm tin nhắn mới vào cuối mảng (append), giữ nguyên các tin cũ đã load.
+
+#### 3. Khi load thêm tin nhắn cũ (scroll lên)
+
+- **Prepend** (nối vào đầu) các tin nhắn cũ vào mảng hiện tại, không replace.
+- Đảm bảo không bị trùng tin nhắn (check message_id).
+
+#### 4. API backend phải hỗ trợ phân trang chuẩn
+
+- Khi gọi `/api/v1/chat/messages/history/{friend_id}?skip=0&limit=50` trả về 50 tin mới nhất.
+- Khi gọi `/api/v1/chat/messages/history/{friend_id}?skip=50&limit=50` trả về 50 tin cũ hơn tiếp theo.
+- FE phải nối đúng vào đầu mảng.
+
+#### 5. Khi chuyển bạn chat
+
+- Clear state chat hiện tại, load lại lịch sử đúng của bạn mới.
+
+### Gợi ý code FE (React pseudo-code)
+
+```js
+// State lưu lịch sử từng bạn
+const [chatHistory, setChatHistory] = useState({}); // { friendId: [msg, ...] }
+const [currentFriendId, setCurrentFriendId] = useState(null);
+
+function onSendMessage(newMsg) {
+  setChatHistory((prev) => ({
+    ...prev,
+    [currentFriendId]: [...(prev[currentFriendId] || []), newMsg],
+  }));
+}
+
+function onLoadMore(oldMsgs) {
+  setChatHistory((prev) => ({
+    ...prev,
+    [currentFriendId]: [...oldMsgs, ...(prev[currentFriendId] || [])],
+  }));
+}
+```
+
+### Checklist tối ưu
+
+- [x] FE lưu lịch sử chat riêng cho từng bạn.
+- [x] Khi gửi tin mới, chỉ append vào list, không replace.
+- [x] Khi load thêm tin cũ, prepend vào đầu list.
+- [x] Khi chuyển bạn chat, load lại đúng lịch sử.
+- [x] API backend trả về đúng phân trang, không lặp/tin trùng.
+
+### Nếu vẫn bị mất tin nhắn
+
+- **Kiểm tra lại API:** Đảm bảo skip/limit hoạt động đúng, không trả về trùng hoặc thiếu tin nhắn.
+- **Kiểm tra lại logic FE:** Đảm bảo không replace toàn bộ list khi gửi hoặc load thêm.
+
+---
