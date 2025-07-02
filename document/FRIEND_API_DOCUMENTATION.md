@@ -137,3 +137,33 @@
 - **Chức năng:** Xóa một người khỏi danh sách bạn bè.
 
 ---
+
+## 7. Kiểm tra trạng thái bạn bè
+
+- **Endpoint:** `GET /api/v1/friends/status/{friend_id}`
+- **Headers:** `Authorization: Bearer <access_token>`
+- **Path Param:**
+  - `friend_id`: UUID của user muốn kiểm tra trạng thái quan hệ bạn bè
+- **Response:**
+  ```json
+  { "status": "friends" }           // Đã là bạn bè
+  { "status": "request_sent" }      // Bạn đã gửi lời mời kết bạn cho người này
+  { "status": "request_received" }  // Người này đã gửi lời mời kết bạn cho bạn
+  { "status": "none" }              // Không có quan hệ bạn bè/lời mời nào
+  ```
+- **Chức năng:** FE dùng API này để xác định trạng thái bạn bè, hiển thị đúng nút "Thêm bạn", "Đã gửi lời mời", "Đã nhận lời mời" hoặc "Bạn bè".
+
+---
+
+## Lưu ý khi tìm kiếm và gửi lời mời kết bạn
+
+- Khi user đã gửi lời mời kết bạn cho một người, nếu tiếp tục gửi nữa, backend sẽ trả về lỗi:
+  ```json
+  {
+    "detail": "Friend request already exists"
+  }
+  ```
+- FE cần kiểm tra response của API gửi lời mời kết bạn (`POST /api/v1/friends/request`). Nếu nhận được lỗi này, nên hiển thị thông báo cho user biết: "Bạn đã gửi lời mời kết bạn trước đó, vui lòng chờ xác nhận."
+- Ngoài ra, nếu đã là bạn bè hoặc đã có lời mời chờ xử lý, backend cũng sẽ trả về lỗi tương tự. FE nên disable nút gửi lời mời hoặc hiển thị trạng thái phù hợp trong danh sách tìm kiếm bạn bè.
+
+---

@@ -14,6 +14,7 @@ from app.services.friend_service import (
 from typing import List
 from app.schemas.account import AccountOut
 from app.db.models.account import Account
+from app.db.models.friend import Friend, FriendStatusEnum
 
 router = APIRouter()
 
@@ -79,3 +80,24 @@ def remove_friend(
     current_user = Depends(get_current_active_account)
 ):
     return remove_friend_service(db, current_user.account_id, friend_id)
+
+@router.get("/status/{friend_id}")
+def get_friendship_status(
+    friend_id: UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_account)
+):
+    # Đã là bạn bè
+    friendship = db.query(Friend).filter(
+        ((Friend.sender_id == current_user.account_id) & (Friend.receiver_id == friend_id)) |
+        ((Friend.sender_id == friend_id) & (Friend.receiver_id == current_user.account_id))
+    ).first()
+    if friendship:
+        if friendship.status == FriendStatusEnum.accepted:
+            return {"status": "friends"}
+        elif friendship.status == FriendStatusEnum.pending:
+            if friendship.sender_id == current_user.account_id:
+                return {"status": "request_sent"}
+            elif friendship.receiver_id == current_user.account_id:
+                return {"status": "request_received"}
+    return {"status": "none"}
