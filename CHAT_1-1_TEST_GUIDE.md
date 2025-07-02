@@ -404,3 +404,53 @@ function onLoadMore(oldMsgs) {
 - **Kiểm tra lại logic FE:** Đảm bảo không replace toàn bộ list khi gửi hoặc load thêm.
 
 ---
+
+## 11. Tìm kiếm account (search account) và phân trang
+
+### API tìm kiếm account
+
+- **Endpoint:** `GET /api/v1/accounts/search/`
+- **Query params:**
+  - `name`: Từ khóa tìm kiếm (username hoặc full name, partial match, không phân biệt hoa thường)
+  - `skip`: (tùy chọn) Số lượng account bỏ qua (dùng cho phân trang/lazy load)
+  - `limit`: (tùy chọn) Số lượng account trả về mỗi lần (mặc định 100, nên chọn 10-20 cho UI)
+- **Yêu cầu đăng nhập:** Có (phải truyền token)
+- **Response:**
+  - Trả về danh sách các account dạng `AccountOut`.
+
+**Ví dụ gọi API:**
+
+```
+GET /api/v1/accounts/search/?name=khoi&skip=0&limit=20
+Authorization: Bearer <access_token>
+```
+
+- Khi user scroll hoặc bấm "Xem thêm", FE tăng `skip` lên bằng số account đã có, giữ nguyên `limit` để lấy thêm account mới.
+- FE nên nối thêm vào danh sách hiện tại, không replace toàn bộ list.
+- Nếu response trả về ít hơn `limit`, có thể đã hết kết quả.
+
+## 11. Phân trang khi tìm kiếm account (search user)
+
+### API tìm kiếm account hỗ trợ phân trang
+
+- **Endpoint:** `GET /api/v1/accounts/search/?name={keyword}&skip={skip}&limit={limit}`
+- **Tham số:**
+  - `name`: Từ khóa tìm kiếm (bắt buộc)
+  - `skip`: Số lượng account bỏ qua (dùng cho phân trang/lazy load, mặc định 0)
+  - `limit`: Số lượng account trả về mỗi lần (ví dụ: 20, 50, 100, mặc định 100)
+- **Ví dụ:**
+  - Lấy 20 account đầu tiên: `/api/v1/accounts/search/?name=khoi&skip=0&limit=20`
+  - Lấy 20 account tiếp theo: `/api/v1/accounts/search/?name=khoi&skip=20&limit=20`
+
+### FE cần làm gì?
+
+- Khi user scroll hoặc bấm "Xem thêm", FE tăng `skip` lên bằng số account đã có, giữ nguyên `limit`.
+- FE nối thêm kết quả mới vào danh sách hiện tại, không replace toàn bộ.
+- Nếu trả về ít hơn `limit`, có thể đã hết kết quả.
+
+### Gợi ý UI/UX:
+
+- Hiển thị nút "Xem thêm" hoặc tự động load thêm khi scroll tới cuối danh sách.
+- Thông báo "Không còn kết quả" nếu đã hết.
+
+---

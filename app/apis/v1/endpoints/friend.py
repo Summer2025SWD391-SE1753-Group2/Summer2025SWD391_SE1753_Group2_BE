@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
 from app.core.deps import get_db, get_current_active_account
-from app.schemas.friend import FriendRequest, FriendResponse
+from app.schemas.friend import FriendRequest, FriendResponse, FriendPendingWithSender
 from app.services.friend_service import (
     send_friend_request,
     accept_friend_request,
@@ -13,6 +13,7 @@ from app.services.friend_service import (
 )
 from typing import List
 from app.schemas.account import AccountOut
+from app.db.models.account import Account
 
 router = APIRouter()
 
@@ -47,12 +48,28 @@ def list_friends(
 ):
     return get_friends(db, current_user.account_id)
 
-@router.get("/pending", response_model=List[FriendResponse])
+@router.get("/pending", response_model=List[FriendPendingWithSender])
 def list_pending_requests(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_account)
 ):
-    return get_pending_requests(db, current_user.account_id)
+    pending = get_pending_requests(db, current_user.account_id)
+    result = []
+    for req in pending:
+        sender_obj = db.query(Account).filter_by(account_id=req.sender_id).first()
+        sender = None
+        if sender_obj:
+            sender = {
+                "account_id": sender_obj.account_id,
+                "username": sender_obj.username,
+                "full_name": sender_obj.full_name,
+                "avatar": sender_obj.avatar
+            }
+        req_dict = req.__dict__.copy()
+        req_dict["sender"] = sender
+        result.append(req_dict)
+    return result
+
 @router.delete("/{friend_id}", 
               summary="Remove friend",
               description="Remove a user from friends list")
