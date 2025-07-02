@@ -9,7 +9,8 @@ from app.services.friend_service import (
     reject_friend_request,
     get_friends,
     get_pending_requests,
-    remove_friend_service
+    remove_friend_service,
+    get_friendship_status
 )
 from typing import List
 from app.schemas.account import AccountOut
@@ -49,6 +50,7 @@ def list_friends(
     return get_friends(db, current_user.account_id)
 
 @router.get("/pending", response_model=List[FriendPendingWithSender])
+=======
 def list_pending_requests(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_account)
@@ -70,6 +72,32 @@ def list_pending_requests(
         result.append(req_dict)
     return result
 
+=======
+    raw_requests = get_pending_requests(db, current_user.account_id)
+    
+    # Transform the data to match PendingFriendRequest schema
+    result = []
+    for item in raw_requests:
+        friend_request = item["friend_request"]
+        sender_account = item["sender"]
+        
+        pending_request = PendingFriendRequest(
+            sender_id=friend_request.sender_id,
+            receiver_id=friend_request.receiver_id,
+            status=friend_request.status,
+            created_at=friend_request.created_at,
+            updated_at=friend_request.updated_at,
+            sender={
+                "account_id": sender_account.account_id,
+                "username": sender_account.username,
+                "full_name": sender_account.full_name,
+                "email": sender_account.email,
+                "avatar": sender_account.avatar
+            }
+        )
+        result.append(pending_request)
+    
+    return result
 @router.delete("/{friend_id}", 
               summary="Remove friend",
               description="Remove a user from friends list")
@@ -79,3 +107,11 @@ def remove_friend(
     current_user = Depends(get_current_active_account)
 ):
     return remove_friend_service(db, current_user.account_id, friend_id)
+
+@router.get("/status/{friend_id}")
+def check_friendship_status(
+    friend_id: UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_account)
+):
+    return get_friendship_status(db, current_user.account_id, friend_id)
