@@ -113,4 +113,14 @@ class GroupList(BaseModel):
     groups: List[GroupOut]
     total: int
     skip: int
-    limit: int 
+    limit: int
+
+class GroupChatCreateTransaction(BaseModel):
+    topic_id: UUID4
+    name: str = Field(..., min_length=1, max_length=100, description="Group name")
+    description: Optional[str] = Field(None, max_length=500, description="Group description")
+    member_ids: List[UUID4] = Field(..., min_items=2, max_items=49, description="List of member account IDs (không bao gồm creator)")
+
+class GroupChatTransactionOut(BaseModel):
+    group: GroupOut
+    members: List[GroupMemberOut] 

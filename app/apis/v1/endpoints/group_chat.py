@@ -4,7 +4,7 @@ from uuid import UUID
 from typing import List
 
 from app.core.deps import get_db, get_current_active_account
-from app.schemas.group import GroupCreate, GroupOut, GroupMemberCreate, GroupMemberOut
+from app.schemas.group import GroupCreate, GroupOut, GroupMemberCreate, GroupMemberOut, GroupChatCreateTransaction, GroupChatTransactionOut
 from app.schemas.group_message import GroupMessageCreate, GroupMessageOut, GroupMessageList
 from app.schemas.account import RoleNameEnum
 from app.services.group_chat_service import (
@@ -17,7 +17,8 @@ from app.services.group_chat_service import (
     check_topic_can_create_chat_group,
     get_available_topics_for_chat_group,
     get_topics_with_chat_groups,
-    get_all_topics_with_group_chat
+    get_all_topics_with_group_chat,
+    create_group_chat_transaction
 )
 from app.apis.v1.endpoints.check_role import check_roles
 
@@ -116,4 +117,13 @@ def get_topics_with_or_without_group(
     db: Session = Depends(get_db)
 ):
     """Get all topics and, for each, the group chat info if it exists (or null if not)"""
-    return get_all_topics_with_group_chat(db) 
+    return get_all_topics_with_group_chat(db)
+
+@router.post("/create-transaction", response_model=GroupChatTransactionOut, status_code=status.HTTP_201_CREATED)
+def create_group_chat_transaction_endpoint(
+    data: GroupChatCreateTransaction,
+    db: Session = Depends(get_db),
+    current_user = Depends(check_roles([RoleNameEnum.moderator, RoleNameEnum.admin]))
+):
+    """Tạo group chat mới (transaction): tạo group, add leader, add members, rollback nếu lỗi"""
+    return create_group_chat_transaction(db, data, current_user.account_id, current_user.role.role_name) 

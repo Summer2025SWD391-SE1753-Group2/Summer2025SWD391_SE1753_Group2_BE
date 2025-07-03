@@ -12,6 +12,7 @@ from app.db.models.account import Account
 from app.schemas.group import GroupCreate, GroupOut, GroupMemberCreate, GroupMemberOut
 from app.schemas.group_message import GroupMessageCreate, GroupMessageOut, GroupMessageList
 from app.schemas.account import RoleNameEnum
+from sqlalchemy.exc import SQLAlchemyError
 
 def create_chat_group_from_topic(
     db: Session, 
@@ -429,4 +430,84 @@ def get_all_topics_with_group_chat(db: Session) -> list:
             "status": topic.status.value if hasattr(topic.status, 'value') else str(topic.status),
             "group_chat": group_info
         })
-    return result 
+    return result
+
+def create_group_chat_transaction(
+    db: Session,
+    data,
+    creator_id: UUID,
+    creator_role: RoleNameEnum
+):
+    """Tạo group chat mới (transaction): tạo group, add leader, add members, rollback nếu lỗi"""
+    from app.db.models.account import Account
+    from app.schemas.group import GroupChatTransactionOut, GroupOut, GroupMemberOut
+    if creator_role not in [RoleNameEnum.moderator, RoleNameEnum.admin]:
+        raise HTTPException(status_code=403, detail="Only moderators and admins can create group chats")
+    topic = db.query(Topic).filter(Topic.topic_id == data.topic_id).first()
+    if not topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    if hasattr(topic, 'status') and str(topic.status) == 'inactive':
+        raise HTTPException(status_code=400, detail="Cannot create group chat for inactive topic")
+    existing_group = db.query(Group).filter(
+        Group.topic_id == data.topic_id,
+        Group.is_chat_group == True
+    ).first()
+    if existing_group:
+        raise HTTPException(status_code=400, detail="Topic already has a chat group")
+    # Validate name
+    if not data.name or not data.name.strip() or len(data.name) > 100:
+        raise HTTPException(status_code=422, detail="Invalid group name")
+    # Validate members
+    member_ids = set(str(mid) for mid in data.member_ids)
+    if len(member_ids) < 2:
+        raise HTTPException(status_code=422, detail="Must add at least 2 members")
+    if len(member_ids) > 49:
+        raise HTTPException(status_code=422, detail="Too many members")
+    if str(creator_id) in member_ids:
+        member_ids.remove(str(creator_id))
+    # Check valid accounts
+    accounts = db.query(Account).filter(Account.account_id.in_(member_ids)).all()
+    if len(accounts) != len(member_ids):
+        raise HTTPException(status_code=422, detail="Some member accounts not found")
+    try:
+        # Start transaction
+        group = Group(
+            topic_id=data.topic_id,
+            name=data.name.strip(),
+            description=data.description,
+            group_leader=creator_id,
+            created_by=creator_id,
+            max_members=len(member_ids) + 1,
+            is_chat_group=True
+        )
+        db.add(group)
+        db.flush()  # get group_id
+        # Add leader
+        leader_member = GroupMember(
+            account_id=creator_id,
+            group_id=group.group_id,
+            role=GroupMemberRoleEnum.leader
+        )
+        db.add(leader_member)
+        # Add members
+        member_objs = []
+        for acc in accounts:
+            m = GroupMember(
+                account_id=acc.account_id,
+                group_id=group.group_id,
+                role=GroupMemberRoleEnum.member
+            )
+            db.add(m)
+            member_objs.append(m)
+        db.commit()
+        db.refresh(group)
+        # Prepare output
+        group_out = get_group_by_id(db, group.group_id)
+        members_out = [GroupMemberOut.model_validate(leader_member)]
+        for m in member_objs:
+            db.refresh(m)
+            members_out.append(GroupMemberOut.model_validate(m))
+        return GroupChatTransactionOut(group=group_out, members=members_out)
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to create group chat: {str(e)}") 
