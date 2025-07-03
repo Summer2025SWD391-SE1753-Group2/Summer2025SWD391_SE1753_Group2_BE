@@ -28,7 +28,18 @@ GET /api/v1/group-chat/{group_id}/members
 - **Mô tả**: Lấy danh sách tất cả thành viên trong group
 - **Response**: List[GroupMemberOut]
 
-### 1.3 Lấy lịch sử chat
+### 1.3 Lấy danh sách thành viên với search và phân trang
+
+```
+GET /api/v1/group-chat/{group_id}/members/search?skip=0&limit=20&search=john
+```
+
+- **Quyền**: Thành viên của group
+- **Mô tả**: Lấy danh sách thành viên với search và phân trang
+- **Parameters**: skip, limit, search (optional)
+- **Response**: GroupMembersSearchOut với pagination info
+
+### 1.4 Lấy lịch sử chat
 
 ```
 GET /api/v1/group-chat/{group_id}/messages?skip=0&limit=50
@@ -38,7 +49,7 @@ GET /api/v1/group-chat/{group_id}/messages?skip=0&limit=50
 - **Mô tả**: Lấy lịch sử tin nhắn trong group
 - **Response**: GroupMessageList
 
-### 1.4 Lấy group chat của user
+### 1.5 Lấy group chat của user
 
 ```
 GET /api/v1/group-chat/my-groups
@@ -254,6 +265,30 @@ POST /api/v1/group-chat/create-transaction
 }
 ```
 
+### GroupMembersSearchOut
+
+```json
+{
+  "members": [
+    {
+      "group_member_id": "uuid",
+      "account_id": "uuid",
+      "group_id": "uuid",
+      "role": "leader",
+      "joined_at": "datetime",
+      "username": "string",
+      "full_name": "string",
+      "avatar": "string",
+      "email": "string"
+    }
+  ],
+  "total": 25,
+  "skip": 0,
+  "limit": 20,
+  "has_more": true
+}
+```
+
 ---
 
 ## 10. TESTING CHECKLIST
@@ -273,6 +308,8 @@ POST /api/v1/group-chat/create-transaction
 - [ ] Thêm/xóa thành viên
 - [ ] Cập nhật thông tin group
 - [ ] Xóa group chat
+- [ ] Search và phân trang thành viên
+- [ ] Load more thành viên
 
 ---
 

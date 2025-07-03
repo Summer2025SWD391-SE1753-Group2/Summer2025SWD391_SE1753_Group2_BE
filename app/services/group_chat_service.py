@@ -217,6 +217,65 @@ def get_group_members(db: Session, group_id: UUID) -> List[GroupMemberOut]:
     
     return result
 
+def get_group_members_with_search(
+    db: Session, 
+    group_id: UUID, 
+    skip: int = 0, 
+    limit: int = 20,
+    search: str = None
+) -> dict:
+    """Get group members with search and pagination"""
+    from app.db.models.account import Account
+    
+    # Check if group exists
+    group = db.query(Group).filter(Group.group_id == group_id).first()
+    if not group:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Group not found"
+        )
+    
+    # Build query
+    query = db.query(GroupMember).options(
+        joinedload(GroupMember.account)
+    ).filter(GroupMember.group_id == group_id)
+    
+    # Add search filter if provided
+    if search and search.strip():
+        search_term = f"%{search.strip()}%"
+        query = query.join(Account).filter(
+            db.or_(
+                Account.username.ilike(search_term),
+                Account.full_name.ilike(search_term),
+                Account.email.ilike(search_term)
+            )
+        )
+    
+    # Get total count
+    total = query.count()
+    
+    # Apply pagination and ordering
+    members = query.order_by(GroupMember.joined_at.desc()).offset(skip).limit(limit).all()
+    
+    # Convert to output format
+    result = []
+    for member in members:
+        member_out = GroupMemberOut.model_validate(member)
+        if member.account:
+            member_out.username = member.account.username
+            member_out.full_name = member.account.full_name
+            member_out.avatar = member.account.avatar
+            member_out.email = member.account.email
+        result.append(member_out)
+    
+    return {
+        "members": result,
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "has_more": (skip + limit) < total
+    }
+
 def send_group_message(
     db: Session, 
     message_data: GroupMessageCreate, 

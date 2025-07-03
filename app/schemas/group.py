@@ -103,6 +103,7 @@ class GroupMemberOut(BaseModel):
     username: Optional[str] = None
     full_name: Optional[str] = None
     avatar: Optional[str] = None
+    email: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True, json_encoders={
         datetime: lambda v: v.isoformat(),
@@ -123,4 +124,11 @@ class GroupChatCreateTransaction(BaseModel):
 
 class GroupChatTransactionOut(BaseModel):
     group: GroupOut
-    members: List[GroupMemberOut] 
+    members: List[GroupMemberOut]
+
+class GroupMembersSearchOut(BaseModel):
+    members: List[GroupMemberOut]
+    total: int
+    skip: int
+    limit: int
+    has_more: bool 

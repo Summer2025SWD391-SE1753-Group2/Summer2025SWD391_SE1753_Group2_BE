@@ -4,7 +4,7 @@ from uuid import UUID
 from typing import List
 
 from app.core.deps import get_db, get_current_active_account
-from app.schemas.group import GroupCreate, GroupOut, GroupMemberCreate, GroupMemberOut, GroupChatCreateTransaction, GroupChatTransactionOut, GroupUpdate
+from app.schemas.group import GroupCreate, GroupOut, GroupMemberCreate, GroupMemberOut, GroupChatCreateTransaction, GroupChatTransactionOut, GroupUpdate, GroupMembersSearchOut
 from app.schemas.group_message import GroupMessageCreate, GroupMessageOut, GroupMessageList
 from app.schemas.account import RoleNameEnum
 from app.services.group_chat_service import (
@@ -12,6 +12,7 @@ from app.services.group_chat_service import (
     get_group_by_id,
     add_member_to_group,
     get_group_members,
+    get_group_members_with_search,
     send_group_message,
     get_group_chat_history,
     check_topic_can_create_chat_group,
@@ -150,6 +151,18 @@ def list_group_members(
 ):
     """Get all members of a group"""
     return get_group_members(db, group_id)
+
+@router.get("/{group_id}/members/search", response_model=GroupMembersSearchOut)
+def search_group_members(
+    group_id: UUID,
+    skip: int = Query(0, ge=0, description="Number of members to skip"),
+    limit: int = Query(20, ge=1, le=100, description="Number of members to return"),
+    search: str = Query(None, description="Search term for username, full name, or email"),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_account)
+):
+    """Get group members with search and pagination"""
+    return get_group_members_with_search(db, group_id, skip=skip, limit=limit, search=search)
 
 @router.delete("/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_group_chat_endpoint(
