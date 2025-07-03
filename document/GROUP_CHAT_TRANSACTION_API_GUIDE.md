@@ -224,41 +224,81 @@ GET /api/v1/group-chat/{group_id}/members
 
 ---
 
-## 9. Lấy danh sách group chat của user hiện tại
+## 10. Lấy lịch sử chat group (group chat history)
 
-### API lấy group chat của tôi
+### API lấy tin nhắn group chat
 
 ```
-GET /api/v1/group-chat/my-groups
+GET /api/v1/group-chat/{group_id}/messages?skip=0&limit=50
 ```
 
-- Trả về: danh sách group chat mà user hiện tại tham gia
-- Bao gồm thông tin group, topic, role của user trong group
+- `group_id`: ID của group chat muốn lấy lịch sử
+- `skip`, `limit`: phân trang tin nhắn (mặc định skip=0, limit=50)
+- Yêu cầu user phải là thành viên của group
 
 **Response:**
 
 ```json
-[
-  {
-    "group_id": "uuid-group",
-    "group_name": "Tên group chat",
-    "group_description": "Mô tả group",
-    "topic_id": "uuid-topic",
-    "topic_name": "Tên topic",
-    "member_count": 5,
-    "max_members": 50,
-    "my_role": "leader", // "leader", "moderator", "member"
-    "leader_name": "Tên leader",
-    "created_at": "2024-07-05T12:00:00Z",
-    "joined_at": "2024-07-05T12:00:00Z"
-  }
-]
+{
+  "messages": [
+    {
+      "message_id": "uuid",
+      "group_id": "uuid",
+      "sender_id": "uuid",
+      "content": "Nội dung tin nhắn",
+      "status": "sent",
+      "is_deleted": false,
+      "created_at": "2024-07-05T12:00:00Z",
+      "updated_at": "2024-07-05T12:00:00Z",
+      "sender": {
+        "account_id": "uuid",
+        "username": "user123",
+        "full_name": "Tên đầy đủ",
+        "avatar": "avatar_url"
+      }
+    }
+    // ...
+  ],
+  "total": 100,
+  "skip": 0,
+  "limit": 50
+}
 ```
 
-**Cách sử dụng:**
+**Gợi ý sử dụng:**
 
-- FE dùng API này để hiển thị danh sách group chat của user
-- Có thể dùng để navigate vào group chat hoặc hiển thị thông tin tổng quan
+- FE gọi API này để lấy lịch sử chat của group chat (tương tự như chat bạn bè với `/chat/{friend_id}`)
+- Dùng để render màn hình chat group, phân trang tin nhắn
+- Chỉ thành viên group mới xem được lịch sử chat
+
+---
+
+## 11. Xóa group chat
+
+### API xóa group chat
+
+```
+DELETE /api/v1/group-chat/{group_id}
+```
+
+- `group_id`: ID của group chat muốn xóa
+- **Chỉ admin mới có quyền xóa group chat**
+- Response: 204 No Content (xóa thành công)
+
+**Lưu ý:**
+
+- Khi xóa group chat, tất cả thành viên sẽ bị remove khỏi group
+- Tất cả tin nhắn trong group sẽ bị xóa
+- Group chat sẽ bị xóa hoàn toàn khỏi hệ thống
+- Cần xác nhận (confirm) trước khi xóa
+
+**Lỗi thường gặp:**
+
+```json
+{
+  "detail": "Only admin can delete group chat"
+}
+```
 
 ---
 

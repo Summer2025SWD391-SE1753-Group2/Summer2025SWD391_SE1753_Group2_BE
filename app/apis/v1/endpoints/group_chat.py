@@ -4,7 +4,7 @@ from uuid import UUID
 from typing import List
 
 from app.core.deps import get_db, get_current_active_account
-from app.schemas.group import GroupCreate, GroupOut, GroupMemberCreate, GroupMemberOut, GroupChatCreateTransaction, GroupChatTransactionOut
+from app.schemas.group import GroupCreate, GroupOut, GroupMemberCreate, GroupMemberOut, GroupChatCreateTransaction, GroupChatTransactionOut, GroupUpdate
 from app.schemas.group_message import GroupMessageCreate, GroupMessageOut, GroupMessageList
 from app.schemas.account import RoleNameEnum
 from app.services.group_chat_service import (
@@ -19,7 +19,9 @@ from app.services.group_chat_service import (
     get_topics_with_chat_groups,
     get_all_topics_with_group_chat,
     create_group_chat_transaction,
-    get_my_group_chats
+    get_my_group_chats,
+    delete_group_chat,
+    update_group_chat
 )
 from app.apis.v1.endpoints.check_role import check_roles
 
@@ -118,6 +120,18 @@ def get_group_info(
     """Get group information"""
     return get_group_by_id(db, group_id)
 
+@router.put("/{group_id}", response_model=GroupOut)
+def update_group_info(
+    group_id: UUID,
+    update_data: GroupUpdate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_account)
+):
+    """Update group information (only leader and moderator can update)"""
+    # Convert Pydantic model to dict, excluding None values
+    update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    return update_group_chat(db, group_id, update_dict, current_user.account_id)
+
 @router.post("/{group_id}/members", response_model=GroupMemberOut, status_code=status.HTTP_201_CREATED)
 def add_member(
     group_id: UUID,
@@ -135,4 +149,14 @@ def list_group_members(
     current_user = Depends(get_current_active_account)
 ):
     """Get all members of a group"""
-    return get_group_members(db, group_id) 
+    return get_group_members(db, group_id)
+
+@router.delete("/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_group_chat_endpoint(
+    group_id: UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(check_roles([RoleNameEnum.admin]))
+):
+    """Xóa group chat (chỉ admin mới có quyền)"""
+    delete_group_chat(db, group_id, current_user.account_id, current_user.role.role_name)
+    return None 

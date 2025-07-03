@@ -550,4 +550,104 @@ def get_my_group_chats(db: Session, user_id: UUID) -> List[dict]:
             "joined_at": member.joined_at
         })
     
-    return result 
+    return result
+
+def update_group_chat(
+    db: Session, 
+    group_id: UUID, 
+    update_data: dict,
+    current_user_id: UUID
+) -> GroupOut:
+    """Cập nhật thông tin group chat (chỉ leader và moderator mới có quyền)"""
+    
+    # Check if group exists
+    group = db.query(Group).filter(
+        Group.group_id == group_id,
+        Group.is_chat_group == True
+    ).first()
+    
+    if not group:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Group chat not found"
+        )
+    
+    # Check if current user has permission to update
+    current_member = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.account_id == current_user_id
+    ).first()
+    
+    if not current_member or current_member.role not in [GroupMemberRoleEnum.leader, GroupMemberRoleEnum.moderator]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only leaders and moderators can update group information"
+        )
+    
+    # Update group information
+    if 'name' in update_data:
+        group.name = update_data['name']
+    if 'description' in update_data:
+        group.description = update_data['description']
+    
+    group.updated_at = datetime.now(timezone.utc)
+    
+    try:
+        db.commit()
+        db.refresh(group)
+        return get_group_by_id(db, group_id)
+        
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating group chat: {str(e)}"
+        )
+
+def delete_group_chat(db: Session, group_id: UUID, user_id: UUID, user_role: RoleNameEnum) -> bool:
+    """Xóa group chat (chỉ admin mới có quyền)"""
+    from app.db.models.group_message import GroupMessage
+    from sqlalchemy.exc import SQLAlchemyError
+    
+    # Chỉ admin mới có quyền xóa group chat
+    if user_role != RoleNameEnum.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin can delete group chat"
+        )
+    
+    # Kiểm tra group tồn tại
+    group = db.query(Group).filter(
+        Group.group_id == group_id,
+        Group.is_chat_group == True
+    ).first()
+    
+    if not group:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Group chat not found"
+        )
+    
+    try:
+        # Xóa tất cả messages trong group
+        db.query(GroupMessage).filter(
+            GroupMessage.group_id == group_id
+        ).delete()
+        
+        # Xóa tất cả members trong group
+        db.query(GroupMember).filter(
+            GroupMember.group_id == group_id
+        ).delete()
+        
+        # Xóa group
+        db.delete(group)
+        db.commit()
+        
+        return True
+        
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete group chat: {str(e)}"
+        ) 
