@@ -212,7 +212,84 @@ Khi connect, FE sẽ nhận được:
 
 ---
 
-## 11. Tham khảo thêm
+## 11. Quản lý thành viên group
+
+### a. Đổi tên nhóm
+
+```
+PUT /api/v1/group-chat/{group_id}
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "name": "Tên nhóm mới"
+}
+```
+
+**Quyền:** Leader hoặc moderator của group
+
+### b. Lấy danh sách thành viên
+
+```
+GET /api/v1/group-chat/{group_id}/members
+Authorization: Bearer <access_token>
+```
+
+**Response:**
+
+```json
+[
+  {
+    "group_member_id": "uuid",
+    "account_id": "uuid",
+    "group_id": "uuid",
+    "role": "leader",
+    "joined_at": "2024-07-05T12:00:00Z",
+    "username": "user123",
+    "full_name": "Tên đầy đủ",
+    "avatar": "avatar_url",
+    "email": "user@example.com"
+  }
+]
+```
+
+### c. Tìm kiếm user để thêm vào nhóm
+
+```
+GET /api/v1/accounts/search/?name={keyword}&skip=0&limit=100
+Authorization: Bearer <access_token>
+```
+
+**Lưu ý:** FE cần filter loại bỏ users đã trong nhóm
+
+### d. Thêm user vào nhóm
+
+```
+POST /api/v1/group-chat/{group_id}/members
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "account_id": "uuid",
+  "role": "member"
+}
+```
+
+### e. Xóa thành viên khỏi nhóm
+
+```
+DELETE /api/v1/group-chat/{group_id}/members/{account_id}
+Authorization: Bearer <access_token>
+```
+
+### f. Giới hạn thành viên
+
+- **Tối thiểu:** 2 thành viên
+- **Tối đa:** 50 thành viên
+
+---
+
+## 12. Tham khảo thêm
 
 - API chi tiết: `document/GROUP_CHAT_API_GUIDE.md`, `document/GROUP_CHAT_API_SUMMARY.md`
 - Nếu cần ví dụ code cụ thể (React, Vue, ...), liên hệ backend!
