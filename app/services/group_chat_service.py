@@ -13,6 +13,9 @@ from app.schemas.group import GroupCreate, GroupOut, GroupMemberCreate, GroupMem
 from app.schemas.group_message import GroupMessageCreate, GroupMessageOut, GroupMessageList
 from app.schemas.account import RoleNameEnum
 from sqlalchemy.exc import SQLAlchemyError
+import logging
+
+logger = logging.getLogger(__name__)
 
 def create_chat_group_from_topic(
     db: Session, 
@@ -360,7 +363,7 @@ def get_group_chat_history(
     )
     
     total = query.count()
-    messages = query.order_by(GroupMessage.created_at.desc()).offset(skip).limit(limit).all()
+    messages = query.order_by(GroupMessage.created_at.asc()).offset(skip).limit(limit).all()
     
     message_outs = [GroupMessageOut.model_validate(message) for message in messages]
     
@@ -709,4 +712,56 @@ def delete_group_chat(db: Session, group_id: UUID, user_id: UUID, user_role: Rol
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete group chat: {str(e)}"
-        ) 
+        )
+
+def remove_member_from_group(
+    db: Session,
+    group_id: UUID,
+    account_id: UUID,
+    current_user_id: UUID
+) -> bool:
+    """Xóa thành viên khỏi group (chỉ leader/moderator mới có quyền)"""
+    from app.db.models.group_member import GroupMember, GroupMemberRoleEnum
+    # Kiểm tra group tồn tại
+    group = db.query(Group).filter(Group.group_id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    # Kiểm tra quyền
+    current_member = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.account_id == current_user_id
+    ).first()
+    if not current_member or current_member.role not in [GroupMemberRoleEnum.leader, GroupMemberRoleEnum.moderator]:
+        raise HTTPException(status_code=403, detail="Only leader or moderator can remove members")
+    # Không cho leader tự xóa mình
+    if account_id == current_user_id and current_member.role == GroupMemberRoleEnum.leader:
+        raise HTTPException(status_code=400, detail="Leader cannot remove themselves")
+    # Kiểm tra thành viên cần xóa
+    member = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.account_id == account_id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found in group")
+    db.delete(member)
+    db.commit()
+    return True
+
+def update_user_groups_in_manager(db: Session, user_id: UUID):
+    """Update the user's groups list in the WebSocket manager"""
+    from app.core.websocket_manager import manager
+    
+    # Get user's groups where user is a member
+    user_groups = db.query(Group).join(GroupMember).filter(
+        GroupMember.account_id == user_id,
+        Group.is_chat_group == True
+    ).all()
+    
+    group_ids = [group.group_id for group in user_groups]
+    
+    # Add user to groups without removing from existing ones
+    for group_id in group_ids:
+        if not manager.is_group_member(user_id, group_id):
+            manager.join_group(user_id, group_id)
+    
+    logger.info(f"Updated groups for user {user_id}: {group_ids}") 
