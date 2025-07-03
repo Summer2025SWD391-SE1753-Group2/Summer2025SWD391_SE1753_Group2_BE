@@ -117,6 +117,7 @@ DELETE /api/v1/topics/{topic_id}
 ## 3. Lưu ý
 
 - Trường `status` có thể là `active` hoặc `inactive`. Nếu không truyền sẽ mặc định là `active`.
+- **Nếu topic có status là `inactive` thì KHÔNG thể tạo group chat từ topic đó. FE cần ẩn/disable nút tạo group chat với các topic này.**
 - Khi tạo/cập nhật topic, tên topic phải là duy nhất.
 - Khi xóa topic, các liên kết (post, group, ...) liên quan sẽ bị ảnh hưởng.
 - Các API này yêu cầu xác thực (token) và phân quyền phù hợp (thường là admin hoặc moderator mới được tạo/xóa/cập nhật topic).
@@ -138,6 +139,30 @@ DELETE /api/v1/topics/{topic_id}
   "detail": "Topic not found"
 }
 ```
+
+## 5. Cập nhật mới nhất
+
+### Không thể tạo group chat với topic inactive
+
+- Nếu topic có status là `inactive` thì KHÔNG thể tạo group chat từ topic đó.
+- Khi gọi API tạo group chat với topic inactive, backend trả về lỗi:
+
+```json
+{
+  "detail": "Cannot create group chat for inactive topic"
+}
+```
+
+- Khi gọi API kiểm tra khả năng tạo group chat (`GET /api/v1/group-chat/topics/{topic_id}/check`), nếu topic inactive sẽ trả về:
+
+```json
+{
+  "can_create": false,
+  "reason": "Topic is inactive"
+}
+```
+
+- FE cần ẩn/disable nút tạo group chat với các topic này và xử lý thông báo phù hợp.
 
 ---
 
