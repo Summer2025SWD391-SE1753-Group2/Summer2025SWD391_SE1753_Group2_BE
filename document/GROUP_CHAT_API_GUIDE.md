@@ -22,7 +22,76 @@
 
 ## 3. API Endpoints
 
-### a. Tạo group chat từ topic
+### a. Kiểm tra topic có thể tạo group chat
+
+```
+GET /group-chat/topics/available
+```
+
+**Response:**
+
+```json
+[
+  {
+    "topic_id": "uuid",
+    "topic_name": "Tên topic",
+    "status": "active",
+    "can_create": true
+  }
+]
+```
+
+### b. Lấy danh sách topic đã có group chat
+
+```
+GET /group-chat/topics/with-groups
+```
+
+**Response:**
+
+```json
+[
+  {
+    "topic_id": "uuid",
+    "topic_name": "Tên topic",
+    "group_id": "uuid",
+    "group_name": "Tên group",
+    "group_description": "Mô tả group",
+    "member_count": 5,
+    "max_members": 50,
+    "created_at": "2024-07-05T12:00:00Z"
+  }
+]
+```
+
+### c. Kiểm tra topic cụ thể có thể tạo group chat
+
+```
+GET /group-chat/topics/{topic_id}/check
+```
+
+**Response khi có thể tạo:**
+
+```json
+{
+  "can_create": true,
+  "reason": "Topic is available for creating chat group",
+  "topic_name": "Tên topic"
+}
+```
+
+**Response khi không thể tạo:**
+
+```json
+{
+  "can_create": false,
+  "reason": "Topic already has a chat group",
+  "existing_group_id": "uuid",
+  "existing_group_name": "Tên group hiện tại"
+}
+```
+
+### d. Tạo group chat từ topic
 
 ```
 POST /group-chat/create
@@ -189,19 +258,36 @@ GET /group-chat/{group_id}/messages?skip=0&limit=50
 
 ## 5. Gợi ý UI/UX cho FE
 
-### a. Tạo group:
+### a. Luồng tạo group chat:
 
-- Hiển thị danh sách topic chưa có group chat.
-- Form tạo group với validation.
-- Hiển thị thông báo nếu topic đã có group.
+1. **Hiển thị danh sách topic có thể tạo group:**
 
-### b. Quản lý thành viên:
+   - Gọi `GET /group-chat/topics/available`
+   - Hiển thị danh sách topic với nút "Tạo Group Chat"
+
+2. **Kiểm tra topic trước khi tạo:**
+
+   - Khi user chọn topic, gọi `GET /group-chat/topics/{topic_id}/check`
+   - Nếu `can_create: false`, hiển thị thông báo và link đến group hiện tại
+   - Nếu `can_create: true`, hiển thị form tạo group
+
+3. **Tạo group:**
+   - Form tạo group với validation
+   - Gọi `POST /group-chat/create` để tạo group
+
+### b. Hiển thị topic đã có group:
+
+- Gọi `GET /group-chat/topics/with-groups`
+- Hiển thị danh sách topic với thông tin group tương ứng
+- Cho phép user join vào group hiện có
+
+### c. Quản lý thành viên:
 
 - Hiển thị danh sách thành viên với vai trò.
 - Form thêm thành viên (chỉ Leader/Moderator thấy).
 - Hiển thị số lượng thành viên hiện tại/tối đa.
 
-### c. Chat interface:
+### d. Chat interface:
 
 - Hiển thị tin nhắn với thông tin người gửi.
 - Phân biệt vai trò bằng màu sắc hoặc icon.

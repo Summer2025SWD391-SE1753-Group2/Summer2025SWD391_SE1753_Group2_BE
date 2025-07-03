@@ -15,7 +15,6 @@ class GroupBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, description="Group name")
     description: Optional[str] = Field(None, max_length=1000, description="Group description")
     max_members: int = Field(50, ge=1, le=50, description="Maximum number of members")
-    group_leader: UUID4
 
     @validator('name')
     def name_must_not_be_empty(cls, v):
@@ -23,8 +22,17 @@ class GroupBase(BaseModel):
             raise ValueError('Name must not be empty')
         return v.strip()
 
-class GroupCreate(GroupBase):
-    pass
+class GroupCreate(BaseModel):
+    topic_id: UUID4
+    name: str = Field(..., min_length=1, max_length=255, description="Group name")
+    description: Optional[str] = Field(None, max_length=1000, description="Group description")
+    max_members: int = Field(50, ge=1, le=50, description="Maximum number of members")
+
+    @validator('name')
+    def name_must_not_be_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Name must not be empty')
+        return v.strip()
 
 class GroupUpdate(BaseModel):
     topic_id: Optional[UUID4] = None

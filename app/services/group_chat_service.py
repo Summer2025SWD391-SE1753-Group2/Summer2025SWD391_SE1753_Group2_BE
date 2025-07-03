@@ -302,4 +302,117 @@ def get_group_chat_history(
         total=total,
         skip=skip,
         limit=limit
-    ) 
+    )
+
+def check_topic_can_create_chat_group(db: Session, topic_id: UUID) -> dict:
+    """Check if a topic can create a chat group"""
+    # Check if topic exists
+    topic = db.query(Topic).filter(Topic.topic_id == topic_id).first()
+    if not topic:
+        return {
+            "can_create": False,
+            "reason": "Topic not found"
+        }
+    
+    # Check if topic already has a chat group
+    existing_group = db.query(Group).filter(
+        Group.topic_id == topic_id,
+        Group.is_chat_group == True
+    ).first()
+    
+    if existing_group:
+        return {
+            "can_create": False,
+            "reason": "Topic already has a chat group",
+            "existing_group_id": str(existing_group.group_id),
+            "existing_group_name": existing_group.name
+        }
+    
+    return {
+        "can_create": True,
+        "reason": "Topic is available for creating chat group",
+        "topic_name": topic.name
+    }
+
+def get_available_topics_for_chat_group(db: Session) -> List[dict]:
+    """Get list of topics that can create chat groups"""
+    # Get all topics
+    all_topics = db.query(Topic).filter(Topic.status == "active").all()
+    
+    # Get topics that already have chat groups
+    topics_with_groups = db.query(Group.topic_id).filter(
+        Group.is_chat_group == True
+    ).distinct().all()
+    
+    topics_with_groups_ids = [str(topic_id[0]) for topic_id in topics_with_groups]
+    
+    available_topics = []
+    for topic in all_topics:
+        if str(topic.topic_id) not in topics_with_groups_ids:
+            available_topics.append({
+                "topic_id": str(topic.topic_id),
+                "topic_name": topic.name,
+                "status": topic.status,
+                "can_create": True
+            })
+    
+    return available_topics
+
+def get_topics_with_chat_groups(db: Session) -> List[dict]:
+    """Get list of topics that already have chat groups"""
+    # Get topics with chat groups
+    topics_with_groups = db.query(Topic, Group).join(
+        Group, Topic.topic_id == Group.topic_id
+    ).filter(
+        Group.is_chat_group == True
+    ).all()
+    
+    result = []
+    for topic, group in topics_with_groups:
+        # Get member count
+        member_count = db.query(GroupMember).filter(
+            GroupMember.group_id == group.group_id
+        ).count()
+        
+        result.append({
+            "topic_id": str(topic.topic_id),
+            "topic_name": topic.name,
+            "group_id": str(group.group_id),
+            "group_name": group.name,
+            "group_description": group.description,
+            "member_count": member_count,
+            "max_members": group.max_members,
+            "created_at": group.created_at
+        })
+    
+    return result
+
+def get_all_topics_with_group_chat(db: Session) -> list:
+    """Return all topics and, for each, the group chat info if it exists (or null if not)"""
+    topics = db.query(Topic).all()
+    result = []
+    for topic in topics:
+        group = db.query(Group).filter(
+            Group.topic_id == topic.topic_id,
+            Group.is_chat_group == True
+        ).first()
+        group_info = None
+        if group:
+            member_count = db.query(GroupMember).filter(
+                GroupMember.group_id == group.group_id
+            ).count()
+            group_info = {
+                "group_id": str(group.group_id),
+                "group_name": group.name,
+                "group_description": group.description,
+                "member_count": member_count,
+                "max_members": group.max_members,
+                "created_at": group.created_at,
+            }
+        result.append({
+            "topic_id": str(topic.topic_id),
+            "topic_name": topic.name,
+            "status": topic.status.value if hasattr(topic.status, 'value') else str(topic.status),
+            "group_chat": group_info
+        })
+    return result 
