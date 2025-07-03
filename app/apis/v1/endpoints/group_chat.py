@@ -18,49 +18,12 @@ from app.services.group_chat_service import (
     get_available_topics_for_chat_group,
     get_topics_with_chat_groups,
     get_all_topics_with_group_chat,
-    create_group_chat_transaction
+    create_group_chat_transaction,
+    get_my_group_chats
 )
 from app.apis.v1.endpoints.check_role import check_roles
 
 router = APIRouter()
-
-# Group management endpoints
-@router.post("/create", response_model=GroupOut, status_code=status.HTTP_201_CREATED)
-def create_chat_group(
-    group_data: GroupCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(check_roles([RoleNameEnum.moderator, RoleNameEnum.admin]))
-):
-    """Create a chat group from topic (only moderator and admin)"""
-    return create_chat_group_from_topic(db, group_data, current_user.account_id, current_user.role.role_name)
-
-@router.get("/{group_id}", response_model=GroupOut)
-def get_group_info(
-    group_id: UUID,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_account)
-):
-    """Get group information"""
-    return get_group_by_id(db, group_id)
-
-@router.post("/{group_id}/members", response_model=GroupMemberOut, status_code=status.HTTP_201_CREATED)
-def add_member(
-    group_id: UUID,
-    member_data: GroupMemberCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_account)
-):
-    """Add a member to group (only leader and moderators)"""
-    return add_member_to_group(db, group_id, member_data, current_user.account_id)
-
-@router.get("/{group_id}/members", response_model=List[GroupMemberOut])
-def list_group_members(
-    group_id: UUID,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_account)
-):
-    """Get all members of a group"""
-    return get_group_members(db, group_id)
 
 # Group chat endpoints
 @router.post("/{group_id}/messages", response_model=GroupMessageOut, status_code=status.HTTP_201_CREATED)
@@ -119,6 +82,14 @@ def get_topics_with_or_without_group(
     """Get all topics and, for each, the group chat info if it exists (or null if not)"""
     return get_all_topics_with_group_chat(db)
 
+@router.get("/my-groups")
+def get_my_group_chats_endpoint(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_account)
+):
+    """Lấy danh sách group chat mà user hiện tại tham gia"""
+    return get_my_group_chats(db, current_user.account_id)
+
 @router.post("/create-transaction", response_model=GroupChatTransactionOut, status_code=status.HTTP_201_CREATED)
 def create_group_chat_transaction_endpoint(
     data: GroupChatCreateTransaction,
@@ -126,4 +97,42 @@ def create_group_chat_transaction_endpoint(
     current_user = Depends(check_roles([RoleNameEnum.moderator, RoleNameEnum.admin]))
 ):
     """Tạo group chat mới (transaction): tạo group, add leader, add members, rollback nếu lỗi"""
-    return create_group_chat_transaction(db, data, current_user.account_id, current_user.role.role_name) 
+    return create_group_chat_transaction(db, data, current_user.account_id, current_user.role.role_name)
+
+# Group management endpoints
+@router.post("/create", response_model=GroupOut, status_code=status.HTTP_201_CREATED)
+def create_chat_group(
+    group_data: GroupCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(check_roles([RoleNameEnum.moderator, RoleNameEnum.admin]))
+):
+    """Create a chat group from topic (only moderator and admin)"""
+    return create_chat_group_from_topic(db, group_data, current_user.account_id, current_user.role.role_name)
+
+@router.get("/{group_id}", response_model=GroupOut)
+def get_group_info(
+    group_id: UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_account)
+):
+    """Get group information"""
+    return get_group_by_id(db, group_id)
+
+@router.post("/{group_id}/members", response_model=GroupMemberOut, status_code=status.HTTP_201_CREATED)
+def add_member(
+    group_id: UUID,
+    member_data: GroupMemberCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_account)
+):
+    """Add a member to group (only leader and moderators)"""
+    return add_member_to_group(db, group_id, member_data, current_user.account_id)
+
+@router.get("/{group_id}/members", response_model=List[GroupMemberOut])
+def list_group_members(
+    group_id: UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_account)
+):
+    """Get all members of a group"""
+    return get_group_members(db, group_id) 

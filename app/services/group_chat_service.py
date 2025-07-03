@@ -510,4 +510,44 @@ def create_group_chat_transaction(
         return GroupChatTransactionOut(group=group_out, members=members_out)
     except SQLAlchemyError as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to create group chat: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Failed to create group chat: {str(e)}")
+
+def get_my_group_chats(db: Session, user_id: UUID) -> List[dict]:
+    """Lấy danh sách group chat mà user hiện tại tham gia"""
+    from app.db.models.account import Account
+    # Lấy tất cả group chat mà user tham gia
+    my_groups = db.query(Group, GroupMember).join(
+        GroupMember, Group.group_id == GroupMember.group_id
+    ).filter(
+        GroupMember.account_id == user_id,
+        Group.is_chat_group == True
+    ).all()
+    
+    result = []
+    for group, member in my_groups:
+        # Lấy thông tin topic
+        topic = db.query(Topic).filter(Topic.topic_id == group.topic_id).first()
+        
+        # Đếm số thành viên
+        member_count = db.query(GroupMember).filter(
+            GroupMember.group_id == group.group_id
+        ).count()
+        
+        # Lấy thông tin leader
+        leader = db.query(Account).filter(Account.account_id == group.group_leader).first()
+        
+        result.append({
+            "group_id": str(group.group_id),
+            "group_name": group.name,
+            "group_description": group.description,
+            "topic_id": str(group.topic_id),
+            "topic_name": topic.name if topic else None,
+            "member_count": member_count,
+            "max_members": group.max_members,
+            "my_role": member.role.value if hasattr(member.role, 'value') else str(member.role),
+            "leader_name": leader.full_name if leader else None,
+            "created_at": group.created_at,
+            "joined_at": member.joined_at
+        })
+    
+    return result 

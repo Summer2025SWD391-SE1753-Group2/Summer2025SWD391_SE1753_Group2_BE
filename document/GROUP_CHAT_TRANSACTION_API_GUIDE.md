@@ -202,7 +202,7 @@ GET /api/v1/accounts/search/?name=nguyen
 
 - Khi FE nhập username, gọi API này để suggest user (autocomplete).
 - Chọn user từ danh sách trả về để add vào member_ids khi tạo group chat.
-- Nên loại bỏ user đã là bạn hoặc đã trong group khỏi danh sách suggest (nếu cần).
+- Nên loại bỏ user đã trong group khỏi danh sách suggest (nếu cần).
 
 ---
 
@@ -221,6 +221,44 @@ GET /api/v1/group-chat/{group_id}/members
 
 - Khi FE search user để thêm vào group chat, gọi API này để lấy danh sách account_id các thành viên hiện tại.
 - Nếu user đã có trong group chat thì disable nút "Thêm" hoặc ẩn khỏi danh sách suggest.
+
+---
+
+## 9. Lấy danh sách group chat của user hiện tại
+
+### API lấy group chat của tôi
+
+```
+GET /api/v1/group-chat/my-groups
+```
+
+- Trả về: danh sách group chat mà user hiện tại tham gia
+- Bao gồm thông tin group, topic, role của user trong group
+
+**Response:**
+
+```json
+[
+  {
+    "group_id": "uuid-group",
+    "group_name": "Tên group chat",
+    "group_description": "Mô tả group",
+    "topic_id": "uuid-topic",
+    "topic_name": "Tên topic",
+    "member_count": 5,
+    "max_members": 50,
+    "my_role": "leader", // "leader", "moderator", "member"
+    "leader_name": "Tên leader",
+    "created_at": "2024-07-05T12:00:00Z",
+    "joined_at": "2024-07-05T12:00:00Z"
+  }
+]
+```
+
+**Cách sử dụng:**
+
+- FE dùng API này để hiển thị danh sách group chat của user
+- Có thể dùng để navigate vào group chat hoặc hiển thị thông tin tổng quan
 
 ---
 
