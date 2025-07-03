@@ -45,6 +45,7 @@ class PostCreate(PostBase):
     images: List[str] = []
     steps: List[StepCreate] = []
     created_by: Optional[UUID] = None
+    status: Optional[PostStatusEnum] = None
 
 class PostUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=300)
@@ -82,14 +83,27 @@ class PostOut(BaseModel):
     approved_by: Optional[UUID]
     tags: List[TagOut] = Field(default_factory=list)
     steps: List[StepOut] = Field(default_factory=list)
-    materials: List[Dict[str, Any]] = Field(default_factory=list)
+    materials: List[PostMaterialOut] = Field(default_factory=list)
     topics: List[TopicOut] = Field(default_factory=list)
     images: List[PostImageOut] = Field(default_factory=list)
 
+    # Use model_config instead of Config class for Pydantic v2
+    model_config = {
+        'from_attributes': True,
+        'json_encoders': {
+            datetime: lambda v: v.isoformat(),
+            UUID: lambda v: str(v)
+        }
+    }
+
+    # Replace from_orm with a custom method that works with model_validate
     @classmethod
-    def from_orm(cls, db_obj):
+    def from_db_model(cls, db_obj):
         logger.info(f"Converting post {db_obj.post_id} to PostOut")
+        
+        # Convert steps
         steps = [StepOut.model_validate(step) for step in sorted(db_obj.steps, key=lambda x: x.order_number)]
+        
         # Convert tags to TagOut
         tags = [TagOut.model_validate(tag) for tag in db_obj.tags]
         logger.info(f"Converted {len(tags)} tags")
@@ -104,16 +118,13 @@ class PostOut(BaseModel):
 
         # Convert materials
         materials = []
-        for pm in db_obj.post_materials:
-            if pm.material:
-                material_dict = {
-                    "material_id": str(pm.material.material_id),
-                    "material_name": pm.material.name,
-                    "unit": pm.material.unit,
-                    "quantity": float(pm.quantity)
-                }
-                materials.append(material_dict)
-        logger.info(f"Converted {len(materials)} materials")
+        for pm in getattr(db_obj, 'post_materials', []):
+            if hasattr(pm, 'material') and pm.material is not None:
+                material_out = PostMaterialOut.from_sqlalchemy(pm)
+                materials.append(material_out)
+        
+        logger.info(f"Final materials in PostOut: {materials}")
+        logger.info(f"Materials count: {len(materials)}")
 
         # Create dict with all fields
         obj_dict = {
@@ -135,10 +146,3 @@ class PostOut(BaseModel):
         }
 
         return cls.model_validate(obj_dict)
-
-    class Config:
-        from_attributes = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat(),
-            UUID: lambda v: str(v)
-        }

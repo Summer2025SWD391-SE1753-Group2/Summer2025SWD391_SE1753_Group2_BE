@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.schemas.account import AccountOut, AccountUpdate, AccountCreate, RoleNameEnum
-from app.services.account_service import search_accounts_by_name, confirm_email, update_account_profile, send_confirmation_email, get_account_profile
+from app.schemas.account import AccountOut, AccountUpdate, AccountCreate, RoleNameEnum, PasswordUpdateRequest, UsernameUpdateRequest
+from app.services.account_service import search_accounts_by_name, confirm_email, update_account_profile, send_confirmation_email, get_account_profile, update_password, update_username, is_google_user
 from app.core.deps import get_db, get_current_active_account
 from app.db.models.account import Account, AccountStatusEnum
 from app.services import account_service
@@ -121,6 +121,19 @@ def read_account_me(
     """
     return current_account
 
+@router.get("/is-google-user")
+def check_google_user(
+    current_account: Account = Depends(get_current_active_account)
+):
+    """
+    Check if current user is a Google user
+    """
+    return {
+        "is_google_user": is_google_user(current_account),
+        "username": current_account.username,
+        "email": current_account.email
+    }
+
 @router.put("/me", response_model=AccountOut)
 def update_account_me(
     account_update: AccountUpdate,
@@ -193,3 +206,36 @@ async def view_profile(
     View profile of a specific account
     """
     return await get_account_profile(db, username)
+
+@router.post("/update-password", response_model=AccountOut)
+def update_password_endpoint(
+    password_update: PasswordUpdateRequest,
+    db: Session = Depends(get_db),
+    current_account: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
+):
+    """
+    Update password for current user
+    For Google users, current_password is optional
+    For regular users, current_password is required
+    """
+    return update_password(
+        db=db, 
+        account=current_account, 
+        new_password=password_update.new_password,
+        current_password=password_update.current_password
+    )
+
+@router.post("/update-username", response_model=AccountOut)
+def update_username_endpoint(
+    username_update: UsernameUpdateRequest,
+    db: Session = Depends(get_db),
+    current_account: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
+):
+    """
+    Update username for current user
+    """
+    return update_username(
+        db=db, 
+        account=current_account, 
+        new_username=username_update.new_username
+    )

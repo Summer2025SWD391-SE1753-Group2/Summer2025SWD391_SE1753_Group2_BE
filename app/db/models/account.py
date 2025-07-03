@@ -74,3 +74,59 @@ class Account(Base):
         back_populates="receiver",
         cascade="all, delete-orphan"
     )
+
+    # Liên kết với Feedback
+    feedbacks_created = relationship(
+        "Feedback",
+        foreign_keys="Feedback.created_by",
+        back_populates="creator",
+        cascade="all, delete-orphan"
+    )
+    feedbacks_updated = relationship(
+        "Feedback",
+        foreign_keys="Feedback.updated_by",
+        back_populates="updater",
+        cascade="all, delete-orphan"
+    )
+    feedbacks_resolved = relationship(
+        "Feedback",
+        foreign_keys="Feedback.resolved_by",
+        back_populates="resolver",
+        cascade="all, delete-orphan"
+    )
+    
+    # Liên kết với FeedbackType
+    feedback_types_created = relationship(
+        "FeedbackType",
+        foreign_keys="FeedbackType.created_by",
+        back_populates="creator",
+        cascade="all, delete-orphan"
+    )
+    feedback_types_updated = relationship(
+        "FeedbackType",
+        foreign_keys="FeedbackType.updated_by",
+        back_populates="updater",
+        cascade="all, delete-orphan"
+    )
+    
+    # Liên kết với Message
+    sent_messages = relationship(
+        "Message",
+        foreign_keys="Message.sender_id",
+        back_populates="sender",
+        cascade="all, delete-orphan"
+    )
+    received_messages = relationship(
+        "Message",
+        foreign_keys="Message.receiver_id",
+        back_populates="receiver",
+        cascade="all, delete-orphan"
+    )
+    
+    # Liên kết với GroupMessage
+    group_messages_sent = relationship(
+        "GroupMessage",
+        foreign_keys="GroupMessage.sender_id",
+        back_populates="sender",
+        cascade="all, delete-orphan"
+    )

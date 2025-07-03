@@ -18,7 +18,7 @@ app.add_middleware(
 )
 
 # Import models để load vào metadata
-from app.db.models import account, role
+from app.db.models import account, role, message
 
 # Tạo bảng
 Base.metadata.create_all(bind=engine)

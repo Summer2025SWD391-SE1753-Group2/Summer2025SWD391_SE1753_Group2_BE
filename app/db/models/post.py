@@ -10,7 +10,7 @@ from .post_topic import post_topic
 from app.db.models.post_material import PostMaterial
 from app.db.models.material import Material
 from app.db.models.topic import Topic
-from app.db.models.postImage import PostImage
+from app.db.models.post_image import PostImage
 from app.db.models.tag import Tag
 from app.db.models.step import Step
 from app.db.models.comment import Comment
@@ -40,7 +40,7 @@ class Post(Base):
     steps = relationship("Step", back_populates="post", cascade="all, delete-orphan",order_by="Step.order_number")
     topics = relationship("Topic", secondary=post_topic, back_populates="posts")
     images = relationship("PostImage", back_populates="post", cascade="all, delete-orphan")
-    post_materials = relationship("PostMaterial", back_populates="post", cascade="all, delete-orphan")
+    post_materials = relationship("PostMaterial", back_populates="post", cascade="all, delete-orphan", lazy="joined")
     comments = relationship(Comment, back_populates="post", cascade="all, delete-orphan")
     favourites = relationship("Favourite", secondary="favourite_posts", back_populates="posts")
     

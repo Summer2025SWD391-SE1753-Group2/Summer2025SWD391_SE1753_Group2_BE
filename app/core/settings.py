@@ -60,9 +60,6 @@ class Settings(BaseSettings):
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
     EMAIL_TEST_USER: EmailStr
 
-    # New settings
-    FRONTEND_URL: str
-
     class Config:
         env_file = ".env"
         case_sensitive = True
