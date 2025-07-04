@@ -154,7 +154,7 @@ def get_all_accounts(
     skip: int = Query(0, ge=0, description="Number of accounts to skip"),
     limit: int = Query(10, ge=1, le=100, description="Number of accounts to return"),
     db: Session = Depends(get_db),
-    current_account: Account = Depends(check_roles([RoleNameEnum.admin, RoleNameEnum.moderator]))
+    current_account: Account = Depends(check_roles([RoleNameEnum.admin]))
 ):
     """Get all accounts, optionally filter by status"""
     query = db.query(Account)
