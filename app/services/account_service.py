@@ -293,7 +293,15 @@ def is_google_user(account: Account) -> bool:
     Checks if an account was created via Google OAuth.
     """
     return account.username.startswith("google_")
-
+def get_account(db: Session, account_id: str) -> Account:
+    """
+    Get account by account_id.
+    Raises HTTPException if not found.
+    """
+    account = db.query(Account).filter(Account.account_id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return account
 
 async def get_account_profile(db: Session, username: str) -> Account:
     """
