@@ -34,14 +34,17 @@ def search_posts(db: Session, title: str, skip: int = 0, limit: int = 100):
                 joinedload(Post.topics),
                 joinedload(Post.images),
                 joinedload(Post.steps),
-                joinedload(Post.post_materials).joinedload(PostMaterial.material)
+                joinedload(Post.post_materials).joinedload(PostMaterial.material),
+                joinedload(Post.creator),
+                joinedload(Post.updater),
+                joinedload(Post.approver)
             )\
             .filter(Post.title.ilike(f"%{title}%"))\
             .offset(skip)\
             .limit(limit)\
             .all()
         
-        return [PostOut.model_validate(post) for post in posts]
+        return [PostOut.from_db_model(post) for post in posts]
     except Exception as e:
         logger.error(f"Error in search_posts: {str(e)}", exc_info=True)
         raise
@@ -171,7 +174,10 @@ def get_approved_posts(db: Session, skip: int = 0, limit: int = 100) -> List[Pos
                 joinedload(Post.topics),
                 joinedload(Post.images),
                 joinedload(Post.steps),
-                joinedload(Post.post_materials).joinedload(PostMaterial.material)
+                joinedload(Post.post_materials).joinedload(PostMaterial.material),
+                joinedload(Post.creator),
+                joinedload(Post.updater),
+                joinedload(Post.approver)
             )\
             .filter(Post.status == PostStatusEnum.approved)\
             .order_by(Post.created_at.desc())\
@@ -179,7 +185,7 @@ def get_approved_posts(db: Session, skip: int = 0, limit: int = 100) -> List[Pos
             .limit(limit)\
             .all()
 
-        return [PostOut.model_validate(post) for post in posts]
+        return [PostOut.from_db_model(post) for post in posts]
 
     except Exception as e:
         logger.error(f"Error in get_approved_posts: {str(e)}", exc_info=True)
@@ -192,15 +198,18 @@ def search_posts_by_topic_name(db: Session, topic_name: str, skip: int = 0, limi
             joinedload(Post.topics),
             joinedload(Post.images),
             joinedload(Post.steps),
-            joinedload(Post.post_materials).joinedload(PostMaterial.material)
+            joinedload(Post.post_materials).joinedload(PostMaterial.material),
+            joinedload(Post.creator),
+            joinedload(Post.updater),
+            joinedload(Post.approver)
         )\
         .join(Post.topics)\
         .filter(Topic.name.ilike(f"%{topic_name}%"))\
         .offset(skip)\
         .limit(limit)\
         .all()
-        
-    return [PostOut.model_validate(post) for post in posts]
+    
+    return [PostOut.from_db_model(post) for post in posts]
 def search_posts_by_tag_name(db: Session, tag_name: str, skip: int = 0, limit: int = 100):
     """Search posts by tag name with eager loading"""
     posts = db.query(Post)\
@@ -209,15 +218,18 @@ def search_posts_by_tag_name(db: Session, tag_name: str, skip: int = 0, limit: i
             joinedload(Post.topics),
             joinedload(Post.images),
             joinedload(Post.steps),
-            joinedload(Post.post_materials).joinedload(PostMaterial.material)
+            joinedload(Post.post_materials).joinedload(PostMaterial.material),
+            joinedload(Post.creator),
+            joinedload(Post.updater),
+            joinedload(Post.approver)
         )\
         .join(Post.tags)\
         .filter(Tag.name.ilike(f"%{tag_name}%"))\
         .offset(skip)\
         .limit(limit)\
         .all()
-        
-    return [PostOut.model_validate(post) for post in posts]
+    
+    return [PostOut.from_db_model(post) for post in posts]
 def get_all_posts(db: Session, skip: int = 0, limit: int = 100):
     """Get all posts with eager loading of relationships"""
     try:
@@ -227,7 +239,10 @@ def get_all_posts(db: Session, skip: int = 0, limit: int = 100):
                 joinedload(Post.topics),
                 joinedload(Post.images),
                 joinedload(Post.steps),
-                joinedload(Post.post_materials).joinedload(PostMaterial.material)
+                joinedload(Post.post_materials).joinedload(PostMaterial.material),
+                joinedload(Post.creator),
+                joinedload(Post.updater),
+                joinedload(Post.approver)
             )\
             .order_by(Post.created_at.desc())\
             .offset(skip)\
@@ -250,7 +265,10 @@ def get_post_by_id(db: Session, post_id: UUID) -> PostOut:
                 joinedload(Post.topics),
                 joinedload(Post.images),
                 joinedload(Post.steps),
-                joinedload(Post.post_materials).joinedload(PostMaterial.material)
+                joinedload(Post.post_materials).joinedload(PostMaterial.material),
+                joinedload(Post.creator),
+                joinedload(Post.updater),
+                joinedload(Post.approver)
             )\
             .filter(Post.post_id == post_id)\
             .first()
@@ -285,7 +303,10 @@ def get_my_posts(db: Session, user_id: UUID, skip: int = 0, limit: int = 100) ->
                 joinedload(Post.topics),
                 joinedload(Post.images),
                 joinedload(Post.steps),
-                joinedload(Post.post_materials).joinedload(PostMaterial.material)
+                joinedload(Post.post_materials).joinedload(PostMaterial.material),
+                joinedload(Post.creator),
+                joinedload(Post.updater),
+                joinedload(Post.approver)
             )\
             .filter(Post.created_by == user_id)\
             .order_by(Post.created_at.desc())\
@@ -294,7 +315,7 @@ def get_my_posts(db: Session, user_id: UUID, skip: int = 0, limit: int = 100) ->
             .all()
 
         # Convert to Pydantic models explicitly
-        return [PostOut.model_validate(post) for post in posts]
+        return [PostOut.from_db_model(post) for post in posts]
 
     except Exception as e:
         logger.error(f"Error in get_my_posts: {str(e)}", exc_info=True)

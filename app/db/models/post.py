@@ -47,3 +47,4 @@ class Post(Base):
     # Account relationships
     creator = relationship("Account", back_populates="posts_created", foreign_keys=[created_by])
     updater = relationship("Account", back_populates="posts_updated", foreign_keys=[updated_by])
+    approver = relationship("Account", foreign_keys=[approved_by])
