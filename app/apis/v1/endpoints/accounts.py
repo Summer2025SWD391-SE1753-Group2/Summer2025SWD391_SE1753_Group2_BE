@@ -253,4 +253,16 @@ def update_username_endpoint(
         new_username=username_update.new_username
     )
 
+@router.put("/ban/{account_id}", response_model=AccountOut)
+def ban_account(
+    account_id: str,
+    db: Session = Depends(get_db),
+    current_account: Account = Depends(check_roles([RoleNameEnum.admin]))
+):
+    """
+    Admin ban a user (set status to banned)
+    """
+    db_account = account_service.ban_account(db=db, account_id=account_id)
+    return db_account
+
 

@@ -322,3 +322,18 @@ async def get_account_profile(db: Session, username: str) -> Account:
         )
 
     return account
+
+def ban_account(db: Session, account_id: str) -> Account:
+    """
+    Ban an account by setting status to banned.
+    Raises HTTPException if not found or already banned.
+    """
+    account = get_account(db, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    if account.status == AccountStatusEnum.banned:
+        raise HTTPException(status_code=400, detail="Account is already banned")
+    account.status = AccountStatusEnum.banned
+    db.commit()
+    db.refresh(account)
+    return account
