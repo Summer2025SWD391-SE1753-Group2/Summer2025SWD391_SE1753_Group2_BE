@@ -59,6 +59,17 @@ GET /api/v1/group-chat/my-groups
 - **Mô tả**: Lấy danh sách group chat mà user tham gia
 - **Response**: List[dict] với thông tin group và role của user
 
+### 1.6 Lấy tất cả group chat (Admin/Moderator)
+
+```
+GET /api/v1/group-chat/all
+```
+
+- **Quyền**: Moderator/Admin
+- **Mô tả**: Lấy danh sách tất cả group chat với phân trang và tìm kiếm
+- **Parameters**: skip, limit, search, topic_id
+- **Response**: GroupChatListResponse với đầy đủ thông tin group
+
 ---
 
 ## 2. API SỬA (UPDATE)

@@ -9,7 +9,7 @@ import asyncio
 from app.core.deps import get_db, get_current_active_account
 from app.core.websocket_deps import get_current_user_websocket
 from app.core.websocket_manager import manager
-from app.schemas.group import GroupCreate, GroupOut, GroupMemberCreate, GroupMemberOut, GroupChatCreateTransaction, GroupChatTransactionOut, GroupUpdate, GroupMembersSearchOut
+from app.schemas.group import GroupCreate, GroupOut, GroupMemberCreate, GroupMemberOut, GroupChatCreateTransaction, GroupChatTransactionOut, GroupUpdate, GroupMembersSearchOut, GroupChatListResponse
 from app.schemas.group_message import GroupMessageCreate, GroupMessageOut, GroupMessageList
 from app.schemas.account import RoleNameEnum
 from app.services.group_chat_service import (
@@ -29,7 +29,8 @@ from app.services.group_chat_service import (
     delete_group_chat,
     update_group_chat,
     remove_member_from_group,
-    update_user_groups_in_manager
+    update_user_groups_in_manager,
+    get_all_group_chats
 )
 from app.apis.v1.endpoints.check_role import check_roles
 from app.db.database import SessionLocal
@@ -305,6 +306,18 @@ def get_my_group_chats_endpoint(
 ):
     """Lấy danh sách group chat mà user hiện tại tham gia"""
     return get_my_group_chats(db, current_user.account_id)
+
+@router.get("/all", response_model=GroupChatListResponse)
+def get_all_group_chats_endpoint(
+    skip: int = Query(0, ge=0, description="Number of groups to skip"),
+    limit: int = Query(20, ge=1, le=100, description="Number of groups to return"),
+    search: str = Query(None, description="Search term for group name or description"),
+    topic_id: UUID = Query(None, description="Filter by topic ID"),
+    db: Session = Depends(get_db),
+    current_user = Depends(check_roles([RoleNameEnum.moderator, RoleNameEnum.admin]))
+):
+    """Lấy danh sách tất cả group chat với phân trang và tìm kiếm (chỉ moderator và admin)"""
+    return get_all_group_chats(db, skip=skip, limit=limit, search=search, topic_id=topic_id)
 
 @router.post("/create-transaction", response_model=GroupChatTransactionOut, status_code=status.HTTP_201_CREATED)
 def create_group_chat_transaction_endpoint(
