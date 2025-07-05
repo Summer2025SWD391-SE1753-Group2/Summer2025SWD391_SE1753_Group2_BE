@@ -6,7 +6,7 @@ from app.db.models.account import Account
 from app.core.deps import get_db
 from app.apis.v1.endpoints.check_role import get_current_user  # Add this import
 
-from app.schemas.tag import TagCreate, TagUpdate, TagOut
+from app.schemas.tag import TagCreate, TagUpdate, TagOut, TagListResponse
 from app.services.tag_service import (
     create_tag,
     get_tag_by_id,
@@ -32,7 +32,7 @@ def get_tag_by_id_endpoint(tag_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Tag not found")
     return tag
 
-@router.get("/", response_model=List[TagOut])
+@router.get("/", response_model=TagListResponse)
 def get_all_tags_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return get_all_tags(db, skip=skip, limit=limit) 
 

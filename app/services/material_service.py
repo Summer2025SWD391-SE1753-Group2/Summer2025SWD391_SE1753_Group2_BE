@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 from sqlalchemy import text
@@ -7,7 +7,7 @@ from app.db.models.unit import Unit
 from datetime import datetime, timezone
 
 from app.db.models.material import Material, MaterialStatusEnum
-from app.schemas.material import MaterialCreate, MaterialUpdate
+from app.schemas.material import MaterialCreate, MaterialUpdate, MaterialListResponse, MaterialOut
 
 
 def check_material_name_unique(db: Session, name: str):
@@ -51,8 +51,22 @@ def get_material_by_id(db: Session, material_id: UUID) -> Material:
     return material
 
 
-def get_all_materials(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(Material).offset(skip).limit(limit).all()
+def get_all_materials(db: Session, skip: int = 0, limit: int = 100) -> MaterialListResponse:
+    # Get total count
+    total = db.query(Material).count()
+    
+    # Get paginated results with unit relationship
+    materials = db.query(Material).options(
+        joinedload(Material.unit)
+    ).offset(skip).limit(limit).all()
+    
+    return MaterialListResponse(
+        materials=[MaterialOut.from_orm(m) for m in materials],
+        total=total,
+        skip=skip,
+        limit=limit,
+        has_more=(skip + limit) < total
+    )
 
 
 def update_material(db: Session, material_id: UUID, material_data: MaterialUpdate, updated_by: UUID):
@@ -94,6 +108,7 @@ def update_material(db: Session, material_id: UUID, material_data: MaterialUpdat
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+
 def delete_material(db: Session, material_id: UUID):
     material = get_material_by_id(db, material_id)
     db.delete(material)

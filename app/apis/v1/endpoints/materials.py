@@ -7,7 +7,7 @@ from app.apis.v1.endpoints.check_role import get_current_user
 from app.schemas.account import RoleNameEnum
 from app.apis.v1.endpoints.check_role import check_roles
 from app.core.deps import get_db
-from app.schemas.material import MaterialCreate, MaterialUpdate, MaterialOut
+from app.schemas.material import MaterialCreate, MaterialUpdate, MaterialOut, MaterialListResponse
 from app.services.material_service import (
     create_material,
     get_material_by_id,
@@ -40,10 +40,9 @@ def get_material_by_id_endpoint(material_id: UUID, db: Session = Depends(get_db)
     return material
 
 
-@router.get("/", response_model=List[MaterialOut])
+@router.get("/", response_model=MaterialListResponse)
 def get_all_materials_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    materials = get_all_materials(db, skip=skip, limit=limit)
-    return [MaterialOut.from_orm(m) for m in materials]
+    return get_all_materials(db, skip=skip, limit=limit)
 
 
 @router.put("/{material_id}", response_model=MaterialOut)
