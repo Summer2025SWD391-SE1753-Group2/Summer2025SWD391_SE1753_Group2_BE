@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 from enum import Enum
@@ -36,3 +36,12 @@ class TopicOut(BaseModel):
             datetime: lambda v: v.isoformat(),
             UUID: lambda v: str(v)
         }
+
+
+# Schema response phân trang
+class TopicListResponse(BaseModel):
+    topics: List[TopicOut]
+    total: int
+    skip: int
+    limit: int
+    has_more: bool

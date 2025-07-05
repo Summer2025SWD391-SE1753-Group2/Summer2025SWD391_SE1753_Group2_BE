@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 from pydantic import BaseModel, Field
@@ -58,3 +58,12 @@ class MaterialOut(MaterialBase):
 
     class Config:
         orm_mode = True
+
+
+# Schema response phân trang
+class MaterialListResponse(BaseModel):
+    materials: List[MaterialOut]
+    total: int
+    skip: int
+    limit: int
+    has_more: bool

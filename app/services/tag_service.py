@@ -5,7 +5,7 @@ from sqlalchemy import text
 from uuid import UUID
 from datetime import datetime, timezone
 from app.db.models.tag import Tag, TagStatusEnum
-from app.schemas.tag import TagCreate, TagUpdate
+from app.schemas.tag import TagCreate, TagUpdate, TagListResponse
 
 
 def check_tag_name_unique(db: Session, name: str):
@@ -46,8 +46,20 @@ def get_tag_by_id(db: Session, tag_id: UUID) -> Tag:
     return tag
 
 
-def get_all_tags(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(Tag).offset(skip).limit(limit).all()
+def get_all_tags(db: Session, skip: int = 0, limit: int = 100) -> TagListResponse:
+    # Get total count
+    total = db.query(Tag).count()
+    
+    # Get paginated results
+    tags = db.query(Tag).offset(skip).limit(limit).all()
+    
+    return TagListResponse(
+        tags=tags,
+        total=total,
+        skip=skip,
+        limit=limit,
+        has_more=(skip + limit) < total
+    )
 
 
 def update_tag(db: Session, tag_id: UUID, tag_update: TagUpdate, updated_by: UUID) -> Tag:
