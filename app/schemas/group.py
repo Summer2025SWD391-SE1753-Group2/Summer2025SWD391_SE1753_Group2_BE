@@ -131,4 +131,35 @@ class GroupMembersSearchOut(BaseModel):
     total: int
     skip: int
     limit: int
+    has_more: bool
+
+class GroupChatListItem(BaseModel):
+    group_id: UUID
+    group_name: str
+    group_description: Optional[str] = None
+    topic_id: UUID
+    topic_name: Optional[str] = None
+    topic_status: Optional[str] = None
+    member_count: int
+    max_members: int
+    message_count: int
+    group_leader: UUID
+    leader_name: Optional[str] = None
+    leader_username: Optional[str] = None
+    created_by: UUID
+    created_at: datetime
+    updated_at: datetime
+    latest_message: Optional[dict] = None
+    is_active: bool = True
+
+    model_config = ConfigDict(from_attributes=True, json_encoders={
+        datetime: lambda v: v.isoformat(),
+        UUID: lambda v: str(v)
+    })
+
+class GroupChatListResponse(BaseModel):
+    groups: List[GroupChatListItem]
+    total: int
+    skip: int
+    limit: int
     has_more: bool 

@@ -747,6 +747,92 @@ def remove_member_from_group(
     db.commit()
     return True
 
+def get_all_group_chats(
+    db: Session, 
+    skip: int = 0, 
+    limit: int = 20,
+    search: str = None,
+    topic_id: UUID = None
+) -> dict:
+    """Get all group chats with pagination and search"""
+    
+    # Base query for group chats
+    query = db.query(Group).options(
+        joinedload(Group.topic),
+        joinedload(Group.leader)
+    ).filter(Group.is_chat_group == True)
+    
+    # Apply search filter if provided
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            (Group.name.ilike(search_term)) |
+            (Group.description.ilike(search_term))
+        )
+    
+    # Apply topic filter if provided
+    if topic_id:
+        query = query.filter(Group.topic_id == topic_id)
+    
+    # Get total count
+    total = query.count()
+    
+    # Apply pagination
+    groups = query.order_by(Group.created_at.desc()).offset(skip).limit(limit).all()
+    
+    result = []
+    for group in groups:
+        # Get member count
+        member_count = db.query(GroupMember).filter(
+            GroupMember.group_id == group.group_id
+        ).count()
+        
+        # Get message count
+        message_count = db.query(GroupMessage).filter(
+            GroupMessage.group_id == group.group_id,
+            GroupMessage.is_deleted == False
+        ).count()
+        
+        # Get latest message info
+        latest_message = db.query(GroupMessage).filter(
+            GroupMessage.group_id == group.group_id,
+            GroupMessage.is_deleted == False
+        ).order_by(GroupMessage.created_at.desc()).first()
+        
+        group_info = {
+            "group_id": group.group_id,
+            "group_name": group.name,
+            "group_description": group.description,
+            "topic_id": group.topic_id,
+            "topic_name": group.topic.name if group.topic else None,
+            "topic_status": str(group.topic.status) if group.topic and hasattr(group.topic.status, 'value') else str(group.topic.status) if group.topic else None,
+            "member_count": member_count,
+            "max_members": group.max_members,
+            "message_count": message_count,
+            "group_leader": group.group_leader,
+            "leader_name": group.leader.full_name if group.leader else None,
+            "leader_username": group.leader.username if group.leader else None,
+            "created_by": group.created_by,
+            "created_at": group.created_at,
+            "updated_at": group.updated_at,
+            "latest_message": {
+                "content": latest_message.content if latest_message else None,
+                "sender_name": latest_message.sender.full_name if latest_message and latest_message.sender else None,
+                "created_at": latest_message.created_at if latest_message else None
+            } if latest_message else None,
+            "is_active": True  # All existing groups are considered active
+        }
+        
+        result.append(group_info)
+    
+    return {
+        "groups": result,
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "has_more": (skip + limit) < total
+    }
+
 def update_user_groups_in_manager(db: Session, user_id: UUID):
     """Update the user's groups list in the WebSocket manager"""
     from app.core.websocket_manager import manager
