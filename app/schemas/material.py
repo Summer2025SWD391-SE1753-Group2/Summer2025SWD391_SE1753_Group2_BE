@@ -39,7 +39,7 @@ class MaterialOut(MaterialBase):
     updated_at: datetime
     created_by: Optional[UUID]
     updated_by: Optional[UUID]
-    unit_name: str  # Lấy từ unit.name
+    unit_name: Optional[str] = None  # Lấy từ unit.name
 
     @classmethod
     def from_orm(cls, obj):
@@ -56,8 +56,7 @@ class MaterialOut(MaterialBase):
             updated_by=obj.updated_by,
         )
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 
 # Schema response phân trang
