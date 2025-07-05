@@ -15,6 +15,7 @@ class Group(Base):
     created_by = Column(UUID(as_uuid=True), ForeignKey("account.account_id"), nullable=False)
     max_members = Column(Integer, default=50, nullable=False)  # Số thành viên tối đa
     is_chat_group = Column(Boolean, default=False, nullable=False)  # Đánh dấu là chat group
+    is_active = Column(Boolean, default=True, nullable=False)  # Trạng thái hoạt động của group
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
