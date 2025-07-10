@@ -10,6 +10,7 @@ from app.schemas.material import MaterialOut
 from app.schemas.topic import TopicOut
 from app.schemas.step import StepCreate, StepOut
 from app.schemas.post_material import PostMaterialCreate, PostMaterialOut
+from app.schemas.common import AccountSummary
 import logging
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,7 @@ class PostOut(BaseModel):
     created_by: UUID
     updated_by: Optional[UUID]
     approved_by: Optional[UUID]
+    creator: Optional[AccountSummary] = None  # Add creator info
     tags: List[TagOut] = Field(default_factory=list)
     steps: List[StepOut] = Field(default_factory=list)
     materials: List[PostMaterialOut] = Field(default_factory=list)
@@ -100,6 +102,11 @@ class PostOut(BaseModel):
     @classmethod
     def from_db_model(cls, db_obj):
         logger.info(f"Converting post {db_obj.post_id} to PostOut")
+        
+        # Convert creator info
+        creator = None
+        if hasattr(db_obj, 'creator') and db_obj.creator:
+            creator = AccountSummary.model_validate(db_obj.creator)
         
         # Convert steps
         steps = [StepOut.model_validate(step) for step in sorted(db_obj.steps, key=lambda x: x.order_number)]
@@ -138,6 +145,7 @@ class PostOut(BaseModel):
             "created_by": db_obj.created_by,
             "updated_by": db_obj.updated_by,
             "approved_by": db_obj.approved_by,
+            "creator": creator,
             "tags": tags,
             "steps": steps,
             "topics": topics,
