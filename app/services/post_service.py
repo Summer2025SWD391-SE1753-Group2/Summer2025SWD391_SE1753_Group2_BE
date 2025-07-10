@@ -398,17 +398,27 @@ def update_post(db: Session, post_id: UUID, post_data: PostUpdate) -> PostOut:
                 )
                 db.add(step)
 
-        # If content changed and there were comments, set status to waiting and delete comments
+        # Check if content changed
         content_changed = (post_data.title is not None and post_data.title != existing_post.title) or \
                          (post_data.content is not None and post_data.content != existing_post.content) or \
                          post_data.materials is not None or post_data.images is not None or post_data.steps is not None
 
-        if content_changed and old_comments_count > 0:
-            existing_post.status = PostStatusEnum.waiting
-            existing_post.rejection_reason = None
-            existing_post.approved_by = None
-            # Delete all comments
-            db.query(Comment).filter(Comment.post_id == post_id).delete()
+        # Handle status changes based on content changes and current status
+        if content_changed:
+            # If post was rejected and user makes changes, resubmit for review
+            if existing_post.status == PostStatusEnum.rejected:
+                existing_post.status = PostStatusEnum.waiting
+                existing_post.rejection_reason = None
+                existing_post.approved_by = None
+            # If post had comments and content changed, reset status and delete comments
+            elif old_comments_count > 0:
+                existing_post.status = PostStatusEnum.waiting
+                existing_post.rejection_reason = None
+                existing_post.approved_by = None
+            
+            # Delete all comments if there were any (for both rejected posts and posts with comments)
+            if old_comments_count > 0:
+                db.query(Comment).filter(Comment.post_id == post_id).delete()
 
         # Update the updated_at timestamp
         existing_post.updated_at = datetime.now(timezone.utc)
