@@ -16,8 +16,7 @@ from app.services.tag_service import (
 )
 
 router = APIRouter()
-
-@router.post("/", response_model=TagOut, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=TagOut)
 def create_tag_endpoint(
     tag_data: TagCreate,
     db: Session = Depends(get_db),
