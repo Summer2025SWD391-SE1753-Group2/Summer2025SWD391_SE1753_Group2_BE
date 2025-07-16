@@ -9,12 +9,12 @@ from typing import List
 def create_report(db: Session, report_data: ReportCreate, created_by: UUID) -> Report:
     report = Report(
         title=report_data.title,
-        type=report_data.type,
+        type=report_data.type.value if hasattr(report_data.type, 'value') else report_data.type,
         reason=report_data.reason,
         description=report_data.description,
         unit=getattr(report_data, "unit", None),
         object_add=getattr(report_data, "object_add", None),
-        status=ReportStatusEnum.pending,
+        status=ReportStatusEnum.pending.value,
         created_by=created_by,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc)
@@ -35,9 +35,9 @@ def get_report_by_id(db: Session, report_id: UUID) -> Report:
 
 def update_report_status(db: Session, report_id: UUID, update_data: ReportUpdate, updated_by: UUID) -> Report:
     report = get_report_by_id(db, report_id)
-    if report.status != ReportStatusEnum.pending:
+    if report.status != ReportStatusEnum.pending.value:
         raise HTTPException(status_code=400, detail="Report already processed")
-    report.status = update_data.status
+    report.status = update_data.status.value if hasattr(update_data.status, 'value') else update_data.status
     report.reject_reason = update_data.reject_reason
     if hasattr(update_data, "unit"):
         report.unit = update_data.unit

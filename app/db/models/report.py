@@ -7,16 +7,16 @@ import enum
 import uuid
 
 class ReportTypeEnum(str, enum.Enum):
-    report_material = "Report_material"
-    report_tag = "Report_tag"
-    report_topic = "Report_topic"
-    report_post = "Report_post"
-    report_other = "Report_other"
+    report_material = "report_material"
+    report_tag = "report_tag"
+    report_topic = "report_topic"
+    report_post = "report_post"
+    report_other = "report_other"
 
 class ReportStatusEnum(str, enum.Enum):
-    pending = "PENDING"
-    approve = "APPROVE"
-    reject = "REJECT"
+    pending = "pending"
+    approve = "approve"
+    reject = "reject"
 
 class Report(Base):
     __tablename__ = "report"

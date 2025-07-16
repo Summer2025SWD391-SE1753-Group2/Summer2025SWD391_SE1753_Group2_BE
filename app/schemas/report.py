@@ -4,16 +4,16 @@ from datetime import datetime
 from enum import Enum
 
 class ReportTypeEnum(str, Enum):
-    report_material = "Report_material"
-    report_tag = "Report_tag"
-    report_topic = "Report_topic"
-    report_post = "Report_post"
-    report_other = "Report_other"
+    report_material = "report_material"
+    report_tag = "report_tag"
+    report_topic = "report_topic"
+    report_post = "report_post"
+    report_other = "report_other"
 
 class ReportStatusEnum(str, Enum):
-    pending = "PENDING"
-    approve = "APPROVE"
-    reject = "REJECT"
+    pending = "pending"
+    approve = "approve"
+    reject = "reject"
 
 class ReportCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=255)
