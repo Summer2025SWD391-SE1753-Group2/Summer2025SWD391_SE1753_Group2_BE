@@ -12,6 +12,8 @@ def create_report(db: Session, report_data: ReportCreate, created_by: UUID) -> R
         type=report_data.type,
         reason=report_data.reason,
         description=report_data.description,
+        unit=getattr(report_data, "unit", None),
+        object_add=getattr(report_data, "object_add", None),
         status=ReportStatusEnum.pending,
         created_by=created_by,
         created_at=datetime.now(timezone.utc),
@@ -37,6 +39,10 @@ def update_report_status(db: Session, report_id: UUID, update_data: ReportUpdate
         raise HTTPException(status_code=400, detail="Report already processed")
     report.status = update_data.status
     report.reject_reason = update_data.reject_reason
+    if hasattr(update_data, "unit"):
+        report.unit = update_data.unit
+    if hasattr(update_data, "object_add"):
+        report.object_add = update_data.object_add
     report.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(report)

@@ -28,6 +28,8 @@ class Report(Base):
     status = Column(Enum(ReportStatusEnum), default=ReportStatusEnum.pending)
     description = Column(Text, nullable=True)
     reject_reason = Column(Text, nullable=True)
+    object_add = Column(Text, nullable=True)
+    unit = Column(String(255), nullable=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("account.account_id"), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

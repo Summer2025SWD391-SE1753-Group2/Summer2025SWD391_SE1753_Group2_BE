@@ -20,10 +20,14 @@ class ReportCreate(BaseModel):
     type: ReportTypeEnum
     reason: str = Field(..., min_length=3, max_length=255)
     description: str | None = None
+    unit: str | None = None
+    object_add: str | None = None
 
 class ReportUpdate(BaseModel):
     status: ReportStatusEnum
     reject_reason: str | None = None
+    unit: str | None = None
+    object_add: str | None = None
 
 class ReportOut(BaseModel):
     report_id: UUID
@@ -33,6 +37,8 @@ class ReportOut(BaseModel):
     status: ReportStatusEnum
     description: str | None = None
     reject_reason: str | None = None
+    unit: str | None = None
+    object_add: str | None = None
     created_by: UUID
     created_at: datetime
     updated_at: datetime
