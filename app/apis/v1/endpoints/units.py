@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from app.core.deps import get_db
 from app.apis.v1.endpoints.check_role import check_roles
-from app.schemas.unit import UnitCreate, UnitUpdate, UnitOut
+from app.schemas.unit import UnitCreate, UnitUpdate, UnitOut, UnitListResponse
 from app.services import unit_service
 from app.db.models.account import Account
 from app.schemas.account import RoleNameEnum
@@ -20,12 +20,12 @@ def create_unit(
     unit.created_by = current_user.account_id
     return unit_service.create_unit(db, unit, current_user.account_id)
 
-@router.get("/", response_model=List[UnitOut])
+@router.get("/", response_model=UnitListResponse)
 def read_units(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db)
-) -> List[UnitOut]:
+) -> UnitListResponse:
     return unit_service.get_all_units(db, skip=skip, limit=limit)
 
 @router.get("/{unit_id}", response_model=UnitOut)

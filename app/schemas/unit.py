@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 from enum import Enum
@@ -28,3 +28,12 @@ class UnitOut(UnitBase):
     updated_by: Optional[UUID]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# Schema response phân trang
+class UnitListResponse(BaseModel):
+    units: List[UnitOut]
+    total: int
+    skip: int
+    limit: int
+    has_more: bool

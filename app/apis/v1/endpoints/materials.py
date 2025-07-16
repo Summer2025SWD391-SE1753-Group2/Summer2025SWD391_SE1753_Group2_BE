@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from uuid import UUID
 from typing import List
 from app.db.models.account import Account
+from app.db.models.material import Material
 from app.apis.v1.endpoints.check_role import get_current_user
 from app.schemas.account import RoleNameEnum
 from app.apis.v1.endpoints.check_role import check_roles
 from app.core.deps import get_db
-from app.schemas.material import MaterialCreate, MaterialUpdate, MaterialOut
+from app.schemas.material import MaterialCreate, MaterialUpdate, MaterialOut, MaterialListResponse
 from app.services.material_service import (
     create_material,
     get_material_by_id,
@@ -34,16 +35,12 @@ def create_material_endpoint(
 
 @router.get("/{material_id}", response_model=MaterialOut)
 def get_material_by_id_endpoint(material_id: UUID, db: Session = Depends(get_db)):
-    material = get_material_by_id(db, material_id)
-    if not material:
-        raise HTTPException(status_code=404, detail="Material not found")
-    return material
+    return get_material_by_id(db, material_id)
 
 
-@router.get("/", response_model=List[MaterialOut])
+@router.get("/", response_model=MaterialListResponse)
 def get_all_materials_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    materials = get_all_materials(db, skip=skip, limit=limit)
-    return [MaterialOut.from_orm(m) for m in materials]
+    return get_all_materials(db, skip=skip, limit=limit)
 
 
 @router.put("/{material_id}", response_model=MaterialOut)
@@ -54,24 +51,12 @@ def update_material_endpoint(
     current_user: Account = Depends(check_roles([RoleNameEnum.admin, RoleNameEnum.moderator]))
 ):
     """Update a material"""
-    material = get_material_by_id(db, material_id)
-    if not material:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Material not found"
-        )
-    try:
-        return update_material(
-            db=db,
-            material_id=material_id, 
-            material_data=material_data, 
-            updated_by=current_user.account_id
-        )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+    return update_material(
+        db=db,
+        material_id=material_id, 
+        material_data=material_data, 
+        updated_by=current_user.account_id
+    )
 
 @router.delete("/{material_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_material_endpoint(
@@ -79,7 +64,11 @@ def delete_material_endpoint(
     db: Session = Depends(get_db),
     current_user: Account = Depends(check_roles([RoleNameEnum.admin]))
 ):
-    material = get_material_by_id(db, material_id)
+    # Get material to check if it's being used in posts
+    material = db.query(Material).options(
+        joinedload(Material.post_materials)
+    ).filter(Material.material_id == material_id).first()
+    
     if not material:
         raise HTTPException(status_code=404, detail="Material not found")
     

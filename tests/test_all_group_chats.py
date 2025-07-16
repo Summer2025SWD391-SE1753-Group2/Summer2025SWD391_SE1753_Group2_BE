@@ -12,8 +12,13 @@ def login_as_admin() -> Optional[str]:
     """Login as admin and return token"""
     try:
         login_data = {
+<<<<<<< HEAD
             "username": "admin",
             "password": "admin123"
+=======
+            "username": "khoipd12",
+            "password": "SecurePassword@123"
+>>>>>>> ff836887fb3e59d3fef93c625ac5913e8a6e8a90
         }
         
         response = requests.post(f"{BASE_URL}/auth/login", json=login_data, headers=HEADERS)
@@ -32,8 +37,13 @@ def login_as_moderator() -> Optional[str]:
     """Login as moderator and return token"""
     try:
         login_data = {
+<<<<<<< HEAD
             "username": "moderator",
             "password": "moderator123"
+=======
+            "username": "khoipd11",
+            "password": "SecurePassword@123"
+>>>>>>> ff836887fb3e59d3fef93c625ac5913e8a6e8a90
         }
         
         response = requests.post(f"{BASE_URL}/auth/login", json=login_data, headers=HEADERS)
@@ -96,6 +106,32 @@ def test_get_all_group_chats(token: str, skip: int = 0, limit: int = 10, search:
         print(f"❌ Failed: {response.text}")
         return None
 
+<<<<<<< HEAD
+=======
+def test_get_group_detail(token: str, group_id: str):
+    """Test getting specific group detail"""
+    headers = {**HEADERS, "Authorization": f"Bearer {token}"}
+    
+    response = requests.get(f"{BASE_URL}/group-chat/{group_id}", headers=headers)
+    
+    print(f"\n=== Get Group Detail ===")
+    print(f"Status: {response.status_code}")
+    print(f"Group ID: {group_id}")
+    
+    if response.status_code == 200:
+        data = response.json()
+        print(f"✅ Success!")
+        print(f"Group Name: {data['name']}")
+        print(f"Topic: {data['topic_name']}")
+        print(f"Leader: {data['leader_name']}")
+        print(f"Members: {data['member_count']}/{data['max_members']}")
+        print(f"Created: {data['created_at']}")
+        return data
+    else:
+        print(f"❌ Failed: {response.text}")
+        return None
+
+>>>>>>> ff836887fb3e59d3fef93c625ac5913e8a6e8a90
 def test_pagination(token: str):
     """Test pagination functionality"""
     print(f"\n=== Testing Pagination ===")
@@ -137,9 +173,12 @@ def test_permissions():
         print("✅ Correctly requires authentication")
     else:
         print("❌ Should require authentication")
+<<<<<<< HEAD
     
     # Test with regular user token (if available)
     # This would require a regular user account
+=======
+>>>>>>> ff836887fb3e59d3fef93c625ac5913e8a6e8a90
 
 def main():
     """Main test function"""
@@ -152,7 +191,11 @@ def main():
         print(f"✅ Logged in as admin")
         
         # Basic test
+<<<<<<< HEAD
         test_get_all_group_chats(admin_token)
+=======
+        result = test_get_all_group_chats(admin_token)
+>>>>>>> ff836887fb3e59d3fef93c625ac5913e8a6e8a90
         
         # Test pagination
         test_pagination(admin_token)
@@ -160,6 +203,14 @@ def main():
         # Test search
         test_search(admin_token)
         
+<<<<<<< HEAD
+=======
+        # Test group detail if we have groups
+        if result and result['groups']:
+            first_group_id = result['groups'][0]['group_id']
+            test_get_group_detail(admin_token, first_group_id)
+        
+>>>>>>> ff836887fb3e59d3fef93c625ac5913e8a6e8a90
     else:
         print("❌ Failed to login as admin")
     

@@ -5,8 +5,9 @@ from sqlalchemy import text
 from uuid import UUID
 from datetime import datetime, timezone
 from app.db.models.unit import Unit, UnitStatusEnum
-from app.schemas.unit import UnitCreate, UnitUpdate
+from app.schemas.unit import UnitCreate, UnitUpdate, UnitListResponse
 from typing import List
+
 def check_unit_name_unique(db: Session, name: str):
     existing_unit = db.execute(
         text("SELECT 1 FROM unit WHERE name = :name"),
@@ -14,6 +15,7 @@ def check_unit_name_unique(db: Session, name: str):
     ).first()
     if existing_unit:
         raise HTTPException(status_code=400, detail="Unit name already exists")
+
 def search_units_by_name(db: Session, name: str, skip: int = 0, limit: int = 100) -> List[Unit]:
     """
     Search units by name using partial match (case-insensitive)
@@ -23,6 +25,7 @@ def search_units_by_name(db: Session, name: str, skip: int = 0, limit: int = 100
         .offset(skip)\
         .limit(limit)\
         .all()
+
 def create_unit(db: Session, unit_data: UnitCreate, created_by: UUID) -> Unit:
     try:
         check_unit_name_unique(db, name=unit_data.name)
@@ -51,8 +54,20 @@ def get_unit_by_id(db: Session, unit_id: UUID) -> Unit:
         raise HTTPException(status_code=404, detail="Unit not found")
     return unit
 
-def get_all_units(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(Unit).offset(skip).limit(limit).all()
+def get_all_units(db: Session, skip: int = 0, limit: int = 100) -> UnitListResponse:
+    # Get total count
+    total = db.query(Unit).count()
+    
+    # Get paginated results
+    units = db.query(Unit).offset(skip).limit(limit).all()
+    
+    return UnitListResponse(
+        units=units,
+        total=total,
+        skip=skip,
+        limit=limit,
+        has_more=(skip + limit) < total
+    )
 
 def update_unit(db: Session, unit_id: UUID, unit_update: UnitUpdate, updated_by: UUID) -> Unit:
     unit = get_unit_by_id(db, unit_id)

@@ -5,7 +5,7 @@ from typing import List
 from app.db.models.account import Account
 from app.apis.v1.endpoints.check_role import get_current_user
 from app.core.deps import get_db
-from app.schemas.topic import TopicCreate, TopicUpdate, TopicOut
+from app.schemas.topic import TopicCreate, TopicUpdate, TopicOut, TopicListResponse
 from app.services.topic_service import (
     create_topic,
     get_topic_by_id,
@@ -35,7 +35,7 @@ def get_topic_by_id_endpoint(
         raise HTTPException(status_code=404, detail="Topic not found")
     return topic
 
-@router.get("/", response_model=List[TopicOut])
+@router.get("/", response_model=TopicListResponse)
 def get_all_topics_endpoint(
     skip: int = 0, 
     limit: int = 100, 

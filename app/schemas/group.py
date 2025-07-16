@@ -53,6 +53,7 @@ class GroupInDBBase(GroupBase):
     created_at: datetime
     updated_at: datetime
     is_chat_group: bool
+    is_active: bool = True
 
     class Config:
         from_attributes = True
@@ -72,6 +73,7 @@ class GroupOut(GroupBase):
     group_leader: UUID
     created_by: UUID
     is_chat_group: bool
+    is_active: bool = True
     created_at: datetime
     updated_at: datetime
     

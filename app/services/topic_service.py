@@ -6,7 +6,7 @@ from uuid import UUID
 from datetime import datetime, timezone
 
 from app.db.models.topic import Topic, TopicStatusEnum
-from app.schemas.topic import TopicCreate, TopicUpdate
+from app.schemas.topic import TopicCreate, TopicUpdate, TopicListResponse
 
 
 def check_topic_name_unique(db: Session, name: str):
@@ -51,8 +51,20 @@ def get_topic_by_id(db: Session, topic_id: UUID) -> Topic:
     return topic
 
 
-def get_all_topics(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(Topic).offset(skip).limit(limit).all()
+def get_all_topics(db: Session, skip: int = 0, limit: int = 100) -> TopicListResponse:
+    # Get total count
+    total = db.query(Topic).count()
+    
+    # Get paginated results
+    topics = db.query(Topic).offset(skip).limit(limit).all()
+    
+    return TopicListResponse(
+        topics=topics,
+        total=total,
+        skip=skip,
+        limit=limit,
+        has_more=(skip + limit) < total
+    )
 
 
 def update_topic(db: Session, topic_id: UUID, topic_update: TopicUpdate, updated_by: UUID) -> Topic:

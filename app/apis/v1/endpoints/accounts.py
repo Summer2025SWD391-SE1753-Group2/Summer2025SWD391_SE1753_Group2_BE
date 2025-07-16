@@ -148,7 +148,20 @@ def update_account_me(
         account_id=current_account.account_id,
         account_update=account_update
     )
-
+@router.get("/all", response_model=List[AccountOut])
+def get_all_accounts(
+    status: Optional[AccountStatusEnum] = Query(None, description="Filter by account status (active, banned, inactive)"),
+    skip: int = Query(0, ge=0, description="Number of accounts to skip"),
+    limit: int = Query(10, ge=1, le=100, description="Number of accounts to return"),
+    db: Session = Depends(get_db),
+    current_account: Account = Depends(check_roles([RoleNameEnum.admin]))
+):
+    """Get all accounts, optionally filter by status"""
+    query = db.query(Account)
+    if status:
+        query = query.filter(Account.status == status)
+    accounts = query.offset(skip).limit(limit).all()
+    return accounts
 @router.get("/{account_id}", response_model=AccountOut)
 def read_account(
     account_id: str,
@@ -239,3 +252,17 @@ def update_username_endpoint(
         account=current_account, 
         new_username=username_update.new_username
     )
+
+@router.put("/ban/{account_id}", response_model=AccountOut)
+def ban_account(
+    account_id: str,
+    db: Session = Depends(get_db),
+    current_account: Account = Depends(check_roles([RoleNameEnum.admin]))
+):
+    """
+    Admin ban a user (set status to banned)
+    """
+    db_account = account_service.ban_account(db=db, account_id=account_id)
+    return db_account
+
+

@@ -293,7 +293,15 @@ def is_google_user(account: Account) -> bool:
     Checks if an account was created via Google OAuth.
     """
     return account.username.startswith("google_")
-
+def get_account(db: Session, account_id: str) -> Account:
+    """
+    Get account by account_id.
+    Raises HTTPException if not found.
+    """
+    account = db.query(Account).filter(Account.account_id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return account
 
 async def get_account_profile(db: Session, username: str) -> Account:
     """
@@ -313,4 +321,19 @@ async def get_account_profile(db: Session, username: str) -> Account:
             detail="Account is not active"
         )
 
+    return account
+
+def ban_account(db: Session, account_id: str) -> Account:
+    """
+    Ban an account by setting status to banned.
+    Raises HTTPException if not found or already banned.
+    """
+    account = get_account(db, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    if account.status == AccountStatusEnum.banned:
+        raise HTTPException(status_code=400, detail="Account is already banned")
+    account.status = AccountStatusEnum.banned
+    db.commit()
+    db.refresh(account)
     return account

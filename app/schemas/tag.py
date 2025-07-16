@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 from enum import Enum
@@ -27,8 +27,6 @@ class TagUpdate(BaseModel):
     status: Optional[TagStatusEnum] = None
 
 
-
-
 # Schema khi trả dữ liệu ra ngoài
 class TagOut(TagBase):
     tag_id: UUID
@@ -43,3 +41,12 @@ class TagOut(TagBase):
             datetime: lambda v: v.isoformat(),
             UUID: lambda v: str(v)
         }
+
+
+# Schema response phân trang
+class TagListResponse(BaseModel):
+    tags: List[TagOut]
+    total: int
+    skip: int
+    limit: int
+    has_more: bool

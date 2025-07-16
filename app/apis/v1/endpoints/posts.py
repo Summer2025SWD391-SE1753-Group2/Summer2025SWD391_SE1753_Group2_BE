@@ -120,3 +120,14 @@ def review_post_endpoint(
     """Review a post (approve or reject)"""
     moderation_data.approved_by = current_user.account_id
     return moderate_post(db, post_id, moderation_data)
+
+@router.get("/user/{user_id}", response_model=List[PostOut])
+def get_posts_by_user_id_endpoint(
+    user_id: UUID,
+    skip: int = Query(0, ge=0, description="Number of posts to skip"),
+    limit: int = Query(10, ge=1, le=100, description="Number of posts to return"),
+    db: Session = Depends(get_db)
+):
+    """Get all posts created by a specific user (by user_id)"""
+    from app.services.post_service import get_my_posts
+    return get_my_posts(db, user_id, skip=skip, limit=limit)

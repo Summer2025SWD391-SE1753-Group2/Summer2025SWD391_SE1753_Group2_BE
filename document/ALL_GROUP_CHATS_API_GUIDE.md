@@ -175,6 +175,38 @@ curl -X GET "http://localhost:8000/api/v1/group-chat/all?search=group&skip=0&lim
 
 ---
 
+## API liên quan
+
+### Xem detail group chat cụ thể
+
+```
+GET /api/v1/group-chat/{group_id}
+```
+
+**Quyền**: Tất cả user đã đăng nhập
+
+**Response**:
+
+```json
+{
+  "group_id": "uuid",
+  "topic_id": "uuid",
+  "name": "Tên group chat",
+  "description": "Mô tả group",
+  "max_members": 50,
+  "group_leader": "uuid",
+  "created_by": "uuid",
+  "is_chat_group": true,
+  "created_at": "2024-07-05T12:00:00Z",
+  "updated_at": "2024-07-05T12:00:00Z",
+  "topic_name": "Tên topic",
+  "leader_name": "Tên leader",
+  "member_count": 5
+}
+```
+
+---
+
 ## Lưu ý quan trọng
 
 1. **Quyền truy cập**: Chỉ moderator và admin mới có thể sử dụng API này
@@ -187,11 +219,12 @@ curl -X GET "http://localhost:8000/api/v1/group-chat/all?search=group&skip=0&lim
 
 ## So sánh với API khác
 
-| API                              | Quyền           | Mục đích              | Dữ liệu                       |
-| -------------------------------- | --------------- | --------------------- | ----------------------------- |
-| `/group-chat/all`                | Moderator/Admin | Quản lý toàn bộ group | Đầy đủ thông tin + phân trang |
-| `/group-chat/my-groups`          | Tất cả user     | Xem group của mình    | Thông tin cơ bản              |
-| `/group-chat/topics/with-groups` | Tất cả user     | Xem topic có group    | Thông tin topic + group       |
+| API                              | Quyền           | Mục đích                | Dữ liệu                       |
+| -------------------------------- | --------------- | ----------------------- | ----------------------------- |
+| `/group-chat/all`                | Moderator/Admin | Quản lý toàn bộ group   | Đầy đủ thông tin + phân trang |
+| `/group-chat/{group_id}`         | Tất cả user     | Xem detail group cụ thể | Thông tin cơ bản              |
+| `/group-chat/my-groups`          | Tất cả user     | Xem group của mình      | Thông tin cơ bản              |
+| `/group-chat/topics/with-groups` | Tất cả user     | Xem topic có group      | Thông tin topic + group       |
 
 ---
 
@@ -210,3 +243,4 @@ Test sẽ kiểm tra:
 - ✅ Tìm kiếm
 - ✅ Lọc theo topic
 - ✅ Response format
+- ✅ Group detail API
