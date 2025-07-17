@@ -12,7 +12,6 @@ from app.apis.v1.endpoints.check_role import check_roles
 from app.schemas.account import RoleNameEnum
 
 router = APIRouter()
-
 @router.get("/by-user/{user_id}", response_model=List[ReportOut])
 def get_reports_by_user_id(
     user_id: UUID,
