@@ -7,10 +7,24 @@ from app.schemas.report import ReportCreate, ReportUpdate, ReportOut
 from app.services.report_service import create_report, get_all_reports, get_report_by_id, update_report_status
 from app.core.deps import get_db
 from app.db.models.account import Account
+from app.db.models.report import Report
 from app.apis.v1.endpoints.check_role import check_roles
 from app.schemas.account import RoleNameEnum
 
 router = APIRouter()
+
+@router.get("/by-user/{user_id}", response_model=List[ReportOut])
+def get_reports_by_user_id(
+    user_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.admin, RoleNameEnum.moderator]))
+):
+    """
+    Lấy danh sách report theo user_id (có phân trang).
+    """
+    return db.query(Report).filter(Report.created_by == user_id).order_by(Report.created_at.desc()).offset(skip).limit(limit).all()
 
 
 @router.post("/", response_model=ReportOut, status_code=status.HTTP_201_CREATED)
