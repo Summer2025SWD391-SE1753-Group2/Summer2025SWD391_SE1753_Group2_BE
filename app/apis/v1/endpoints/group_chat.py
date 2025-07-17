@@ -30,10 +30,12 @@ from app.services.group_chat_service import (
     update_group_chat,
     remove_member_from_group,
     update_user_groups_in_manager,
-    get_all_group_chats
+    get_all_group_chats,
+    join_group_chat
 )
 from app.apis.v1.endpoints.check_role import check_roles
 from app.db.database import SessionLocal
+from app.db.models.group_member import GroupMember
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -49,7 +51,6 @@ async def websocket_group_chat_endpoint(websocket: WebSocket, group_id: UUID):
         # Check if user is a member of the group
         db = SessionLocal()
         try:
-            from app.db.models.group_member import GroupMember
             member = db.query(GroupMember).filter(
                 GroupMember.group_id == group_id,
                 GroupMember.account_id == current_user.account_id
@@ -311,12 +312,16 @@ def get_my_group_chats_endpoint(
 def get_all_group_chats_endpoint(
     skip: int = Query(0, ge=0, description="Number of groups to skip"),
     limit: int = Query(20, ge=1, le=100, description="Number of groups to return"),
-    search: str = Query(None, description="Search term for group name or description"),
+    search: str = Query(None, description="Tìm kiếm theo tên group chat (có thể để rỗng hoặc bất kỳ độ dài nào)"),
     topic_id: UUID = Query(None, description="Filter by topic ID"),
     db: Session = Depends(get_db),
-    current_user = Depends(check_roles([RoleNameEnum.moderator, RoleNameEnum.admin]))
+    current_user = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
 ):
-    """Lấy danh sách tất cả group chat với phân trang và tìm kiếm (chỉ moderator và admin)"""
+    """
+    Lấy danh sách tất cả group chat với phân trang và tìm kiếm (user, moderator, admin).
+    - Nếu search rỗng hoặc không truyền: trả về tất cả group.
+    - Nếu search có giá trị: lọc theo tên group chat (không giới hạn độ dài).
+    """
     return get_all_group_chats(db, skip=skip, limit=limit, search=search, topic_id=topic_id)
 
 @router.post("/create-transaction", response_model=GroupChatTransactionOut, status_code=status.HTTP_201_CREATED)
@@ -409,4 +414,51 @@ def remove_member(
 ):
     """Xóa thành viên khỏi group (chỉ leader/moderator)"""
     remove_member_from_group(db, group_id, account_id, current_user.account_id)
-    return None 
+    return None
+
+@router.post("/{group_id}/join", response_model=GroupMemberOut, status_code=status.HTTP_201_CREATED)
+def join_group_chat_endpoint(
+    group_id: UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
+):
+    """Join a group chat (user, moderator, admin) - tối đa 50 người"""
+    return join_group_chat(db, group_id, current_user.account_id) 
+
+@router.get("/{group_id}/membership")
+def check_group_membership(
+    group_id: UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_account)
+):
+    member = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.account_id == current_user.account_id
+    ).first()
+    if member:
+        return {
+            "is_member": True,
+            "role": member.role,
+            "joined_at": member.joined_at
+        }
+    else:
+        return {"is_member": False}
+
+@router.post("/membership/batch")
+def check_group_membership_batch(
+    group_ids: List[UUID] = Body(..., embed=True),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_account)
+):
+    memberships = []
+    for group_id in group_ids:
+        member = db.query(GroupMember).filter(
+            GroupMember.group_id == group_id,
+            GroupMember.account_id == current_user.account_id
+        ).first()
+        memberships.append({
+            "group_id": str(group_id),
+            "is_member": bool(member),
+            "role": member.role if member else None
+        })
+    return {"memberships": memberships} 

@@ -754,7 +754,7 @@ def get_all_group_chats(
     search: str = None,
     topic_id: UUID = None
 ) -> dict:
-    """Get all group chats with pagination and search"""
+    """Get all group chats with pagination and search (search có thể rỗng hoặc bất kỳ độ dài nào)"""
     
     # Base query for group chats
     query = db.query(Group).options(
@@ -762,12 +762,11 @@ def get_all_group_chats(
         joinedload(Group.leader)
     ).filter(Group.is_chat_group == True)
     
-    # Apply search filter if provided
-    if search:
-        search_term = f"%{search}%"
+    # Apply search filter if provided and not empty
+    if search is not None and search.strip() != "":
+        search_term = f"%{search.strip()}%"
         query = query.filter(
-            (Group.name.ilike(search_term)) |
-            (Group.description.ilike(search_term))
+            Group.name.ilike(search_term)
         )
     
     # Apply topic filter if provided
@@ -820,7 +819,7 @@ def get_all_group_chats(
                 "sender_name": latest_message.sender.full_name if latest_message and latest_message.sender else None,
                 "created_at": latest_message.created_at if latest_message else None
             } if latest_message else None,
-            "is_active": True  # All existing groups are considered active
+            "is_active": group.is_active
         }
         
         result.append(group_info)
@@ -832,6 +831,68 @@ def get_all_group_chats(
         "limit": limit,
         "has_more": (skip + limit) < total
     }
+
+def join_group_chat(
+    db: Session,
+    group_id: UUID,
+    user_id: UUID
+) -> GroupMemberOut:
+    """Join a group chat (user, moderator, admin can join)"""
+    
+    # Check if group exists and is a chat group
+    group = db.query(Group).filter(
+        Group.group_id == group_id,
+        Group.is_chat_group == True
+    ).first()
+    
+    if not group:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Group chat not found"
+        )
+    
+    # Check if group is active
+    if not group.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Group chat is not active"
+        )
+    
+    # Check if user is already a member
+    existing_member = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.account_id == user_id
+    ).first()
+    
+    if existing_member:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You are already a member of this group"
+        )
+    
+    # Check if group is full
+    member_count = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id
+    ).count()
+    
+    if member_count >= group.max_members:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Group is full (maximum 50 members)"
+        )
+    
+    # Add user as member
+    member = GroupMember(
+        account_id=user_id,
+        group_id=group_id,
+        role=GroupMemberRoleEnum.member
+    )
+    
+    db.add(member)
+    db.commit()
+    db.refresh(member)
+    
+    return get_group_member_by_id(db, member.group_member_id)
 
 def update_user_groups_in_manager(db: Session, user_id: UUID):
     """Update the user's groups list in the WebSocket manager"""
