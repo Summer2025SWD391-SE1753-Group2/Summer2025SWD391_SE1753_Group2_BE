@@ -179,7 +179,7 @@ async def handle_typing_indicator(message_data: dict, user_id: UUID):
 async def send_message_endpoint(
     message_data: MessageCreate,
     db: Session = Depends(get_db),
-    current_user: Account = Depends(check_roles([RoleNameEnum.user]))
+    current_user: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
 ):
     """Send a message to a friend (REST endpoint)"""
     return await send_message(db, message_data, current_user.account_id)
@@ -190,7 +190,7 @@ def get_chat_history_endpoint(
     skip: int = Query(0, ge=0, description="Number of messages to skip"),
     limit: int = Query(50, ge=1, le=100, description="Number of messages to return"),
     db: Session = Depends(get_db),
-    current_user: Account = Depends(check_roles([RoleNameEnum.user]))
+    current_user: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
 ):
     """Get chat history with a friend"""
     return get_chat_history(db, current_user.account_id, friend_id, skip=skip, limit=limit)
@@ -199,7 +199,7 @@ def get_chat_history_endpoint(
 def mark_message_as_read_endpoint(
     message_id: UUID,
     db: Session = Depends(get_db),
-    current_user: Account = Depends(check_roles([RoleNameEnum.user]))
+    current_user: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
 ):
     """Mark a message as read"""
     message = mark_message_as_read(db, message_id, current_user.account_id)
@@ -221,7 +221,7 @@ def mark_message_as_read_endpoint(
 def delete_message_endpoint(
     message_id: UUID,
     db: Session = Depends(get_db),
-    current_user: Account = Depends(check_roles([RoleNameEnum.user]))
+    current_user: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
 ):
     """Delete a message (only sender can delete)"""
     delete_message(db, message_id, current_user.account_id)
@@ -230,7 +230,7 @@ def delete_message_endpoint(
 @router.get("/messages/unread-count")
 def get_unread_message_count_endpoint(
     db: Session = Depends(get_db),
-    current_user: Account = Depends(check_roles([RoleNameEnum.user]))
+    current_user: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
 ):
     """Get count of unread messages"""
     count = get_unread_message_count(db, current_user.account_id)
@@ -238,7 +238,7 @@ def get_unread_message_count_endpoint(
 
 @router.get("/friends/online")
 def get_online_friends_endpoint(
-    current_user: Account = Depends(check_roles([RoleNameEnum.user]))
+    current_user: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
 ):
     """Get list of online friends"""
     online_friends = manager.get_online_friends(current_user.account_id)
@@ -251,7 +251,7 @@ def search_chat_messages_endpoint(
     skip: int = Query(0, ge=0, description="Number of messages to skip"),
     limit: int = Query(50, ge=1, le=100, description="Number of messages to return"),
     db: Session = Depends(get_db),
-    current_user: Account = Depends(check_roles([RoleNameEnum.user]))
+    current_user: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
 ):
     """Search chat messages with a friend by keyword"""
     return search_chat_messages(db, current_user.account_id, friend_id, keyword, skip=skip, limit=limit)
