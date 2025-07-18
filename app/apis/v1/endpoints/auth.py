@@ -548,7 +548,7 @@ async def google_callback_redirect_to_frontend(
     """
     Handle Google OAuth callback and redirect to frontend with result
     """
-    frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+    frontend_url = getattr(settings, 'FRONTEND_URL', 'https://swd.nhducminhqt.name.vn')
     
     if error:
         # Google OAuth error occurred

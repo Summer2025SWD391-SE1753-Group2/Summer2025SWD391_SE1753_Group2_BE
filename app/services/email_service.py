@@ -31,17 +31,8 @@ async def send_confirmation_email(email: str, username: str):
     }
     token = jwt.encode(token_data, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     
-    # Create confirmation link - using the API endpoint directly
-    # BE if FE is not existed
-    # base_url = settings.BACKEND_CORS_ORIGINS[0] if isinstance(settings.BACKEND_CORS_ORIGINS, list) else settings.BACKEND_CORS_ORIGINS
-    # Remove trailing slash from base_url if exists
-    # base_url = base_url.rstrip('/')
-    # Remove leading slash from API_V1_STR if exists
-    # api_path = settings.API_V1_STR.lstrip('/')
-    # confirmation_link = f"{base_url}/{api_path}/accounts/confirm-email?token={token}"
-    
-    # Temporary fix: Use hardcoded URL
-    confirmation_link = f"http://localhost:8000/api/v1/accounts/confirm-email?token={token}"
+    # Create confirmation link - FE xác thực
+    confirmation_link = f"https://swd.nhducminhqt.name.vn/verify-email?token={token}"
     
     # Load and render template
     template = env.get_template('email_confirmation.html')
@@ -73,11 +64,7 @@ async def send_reset_password_email(email: str, username: str):
     token = jwt.encode(token_data, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     
     # Create reset password link
-    # base_url = settings.BACKEND_CORS_ORIGINS[0] if isinstance(settings.BACKEND_CORS_ORIGINS, list) else settings.BACKEND_CORS_ORIGINS
-    # base_url = str(base_url).rstrip('/')
-    # api_path = settings.API_V1_STR.lstrip('/')
-    # reset_link = f"{base_url}/{api_path}/auth/reset-password?token={token}"
-    reset_link = f"{settings.FRONTEND_URL}/auth/change-password?token={token}"
+    reset_link = f"https://swd.nhducminhqt.name.vn/reset-password?token={token}"
 
     
     # Load and render template
@@ -109,7 +96,7 @@ async def send_email_verification(email: str, username: str, new_email: str):
     }
     token = jwt.encode(token_data, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     
-    verification_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
+    verification_url = f"https://swd.nhducminhqt.name.vn/verify-email?token={token}"
     
     subject = "Verify your new email address"
     body = f"""
