@@ -31,8 +31,8 @@ async def send_confirmation_email(email: str, username: str):
     }
     token = jwt.encode(token_data, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     
-    # Create confirmation link - FE xác thực
-    confirmation_link = f"https://swd.nhducminhqt.name.vn/verify-email?token={token}"
+    # Create confirmation link - BE xác thực, FE sẽ nhận redirect về login
+    confirmation_link = f"http://54.169.148.165:8000/api/v1/accounts/accounts/confirm-email?token={token}"
     
     # Load and render template
     template = env.get_template('email_confirmation.html')

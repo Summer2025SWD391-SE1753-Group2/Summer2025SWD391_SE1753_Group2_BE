@@ -7,6 +7,8 @@ from app.core.deps import get_db, get_current_active_account
 from app.db.models.account import Account, AccountStatusEnum
 from app.services import account_service
 from app.apis.v1.endpoints.check_role import check_roles
+from fastapi.responses import RedirectResponse
+from app.core import settings
 
 router = APIRouter()
 
@@ -17,14 +19,10 @@ async def confirm_email_get(token: str = Query(...), db: Session = Depends(get_d
     """
     try:
         account = await confirm_email(db, token)
-        return {
-            "message": "Email confirmed successfully",
-            "account": {
-                "username": account.username,
-                "email": account.email,
-                "status": account.status.value
-            }
-        }
+        # Redirect về FE login kèm thông báo thành công
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'https://swd.nhducminhqt.name.vn')
+        redirect_url = f"{frontend_url}/auth/login?email_confirmed=success"
+        return RedirectResponse(url=redirect_url)
     except HTTPException as e:
         raise e
     except Exception as e:
