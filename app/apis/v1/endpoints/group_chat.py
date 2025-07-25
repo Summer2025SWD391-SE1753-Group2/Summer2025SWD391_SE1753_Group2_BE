@@ -35,7 +35,7 @@ from app.services.group_chat_service import (
 )
 from app.apis.v1.endpoints.check_role import check_roles
 from app.db.database import SessionLocal
-from app.db.models.group_member import GroupMember
+from app.db.models.group_member import GroupMember, GroupMemberStatusEnum
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -43,21 +43,22 @@ logger = logging.getLogger(__name__)
 # WebSocket endpoint for real-time group chat
 @router.websocket("/ws/group/{group_id}")
 async def websocket_group_chat_endpoint(websocket: WebSocket, group_id: UUID):
-    """WebSocket endpoint for real-time group chat"""
+    """WebSocket endpoint for real-time group chat - only active members"""
     try:
         # Authenticate user
         current_user = await get_current_user_websocket(websocket)
         
-        # Check if user is a member of the group
+        # Check if user is an ACTIVE member of the group
         db = SessionLocal()
         try:
             member = db.query(GroupMember).filter(
                 GroupMember.group_id == group_id,
-                GroupMember.account_id == current_user.account_id
+                GroupMember.account_id == current_user.account_id,
+                GroupMember.status == GroupMemberStatusEnum.active  # Must be active
             ).first()
             
             if not member:
-                await websocket.close(code=4003, reason="Not a member of this group")
+                await websocket.close(code=4003, reason="Not an active member of this group")
                 return
                 
             # Get group info
@@ -87,6 +88,7 @@ async def websocket_group_chat_endpoint(websocket: WebSocket, group_id: UUID):
             "user_id": str(current_user.account_id),
             "group_id": str(group_id),
             "group_name": group.name,
+            "my_status": member.status.value,
             "message": "Connected to group chat"
         }))
         
@@ -431,18 +433,25 @@ def check_group_membership(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_account)
 ):
+    """Check membership status in group"""
     member = db.query(GroupMember).filter(
         GroupMember.group_id == group_id,
         GroupMember.account_id == current_user.account_id
     ).first()
+    
     if member:
         return {
             "is_member": True,
             "role": member.role,
-            "joined_at": member.joined_at
+            "status": member.status,  # Include status
+            "joined_at": member.joined_at,
+            "is_active": member.status == GroupMemberStatusEnum.active
         }
     else:
-        return {"is_member": False}
+        return {
+            "is_member": False,
+            "status": "no-join"
+        }
 
 @router.post("/membership/batch")
 def check_group_membership_batch(
@@ -450,15 +459,52 @@ def check_group_membership_batch(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_account)
 ):
+    """Check membership status in multiple groups"""
     memberships = []
     for group_id in group_ids:
         member = db.query(GroupMember).filter(
             GroupMember.group_id == group_id,
             GroupMember.account_id == current_user.account_id
         ).first()
-        memberships.append({
-            "group_id": str(group_id),
-            "is_member": bool(member),
-            "role": member.role if member else None
-        })
-    return {"memberships": memberships} 
+        
+        if member:
+            memberships.append({
+                "group_id": str(group_id),
+                "is_member": True,
+                "role": member.role,
+                "status": member.status,
+                "is_active": member.status == GroupMemberStatusEnum.active
+            })
+        else:
+            memberships.append({
+                "group_id": str(group_id),
+                "is_member": False,
+                "status": "no-join",
+                "role": None,
+                "is_active": False
+            })
+    
+    return {"memberships": memberships}
+
+@router.post("/{group_id}/leave", status_code=204)
+def leave_group_chat_endpoint(
+    group_id: UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
+):
+    """Leave a group chat (set status to 'left')"""
+    from app.services.group_chat_service import leave_group_chat
+    leave_group_chat(db, group_id, current_user.account_id)
+    return None
+
+@router.post("/{group_id}/ban/{account_id}", status_code=204)
+def ban_member_from_group_endpoint(
+    group_id: UUID,
+    account_id: UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
+):
+    """Ban a member from group (only leaders can ban)"""
+    from app.services.group_chat_service import ban_member_from_group
+    ban_member_from_group(db, group_id, account_id, current_user.account_id)
+    return None

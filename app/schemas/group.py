@@ -5,6 +5,13 @@ from fastapi import HTTPException, status
 from uuid import UUID
 from enum import Enum
 
+class GroupMemberStatusEnum(str, Enum):
+    active = "active"      # Thành viên đang hoạt động
+    inactive = "inactive"  # Tạm thời không hoạt động
+    left = "left"         # Đã rời group
+    removed = "removed"   # Bị kick
+    banned = "banned"     # Bị ban
+
 class GroupMemberRoleEnum(str, Enum):
     leader = "leader"
     moderator = "moderator"
@@ -93,12 +100,14 @@ class GroupMemberBase(BaseModel):
 class GroupMemberCreate(BaseModel):
     account_id: UUID = Field(..., description="Account ID to add to group")
     role: GroupMemberRoleEnum = GroupMemberRoleEnum.member
+    # status sẽ mặc định là 'active' trong service
 
 class GroupMemberOut(BaseModel):
     group_member_id: UUID
     account_id: UUID
     group_id: UUID
     role: GroupMemberRoleEnum
+    status: GroupMemberStatusEnum
     joined_at: datetime
     
     # Related account info

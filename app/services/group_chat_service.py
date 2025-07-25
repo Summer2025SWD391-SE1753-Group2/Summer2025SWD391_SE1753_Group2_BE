@@ -5,7 +5,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 
 from app.db.models.group import Group
-from app.db.models.group_member import GroupMember, GroupMemberRoleEnum
+from app.db.models.group_member import GroupMember, GroupMemberRoleEnum, GroupMemberStatusEnum
 from app.db.models.group_message import GroupMessage, GroupMessageStatusEnum
 from app.db.models.topic import Topic
 from app.db.models.account import Account
@@ -99,9 +99,10 @@ def get_group_by_id(db: Session, group_id: UUID) -> GroupOut:
             detail="Group not found"
         )
     
-    # Get member count
+    # Get active member count only
     member_count = db.query(GroupMember).filter(
-        GroupMember.group_id == group_id
+        GroupMember.group_id == group_id,
+        GroupMember.status == GroupMemberStatusEnum.active
     ).count()
     
     group_out = GroupOut.model_validate(group)
@@ -130,13 +131,14 @@ def add_member_to_group(
     # Check if current user has permission to add members
     current_member = db.query(GroupMember).filter(
         GroupMember.group_id == group_id,
-        GroupMember.account_id == current_user_id
+        GroupMember.account_id == current_user_id,
+        GroupMember.status == GroupMemberStatusEnum.active  # Only active members can add
     ).first()
     
     if not current_member or current_member.role not in [GroupMemberRoleEnum.leader, GroupMemberRoleEnum.moderator]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only leaders and moderators can add members"
+            detail="Only active leaders and moderators can add members"
         )
     
     # Check if account exists
@@ -147,34 +149,50 @@ def add_member_to_group(
             detail="Account not found"
         )
     
-    # Check if member already exists
+    # Check existing membership
     existing_member = db.query(GroupMember).filter(
         GroupMember.group_id == group_id,
         GroupMember.account_id == member_data.account_id
     ).first()
     
     if existing_member:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Member already exists in group"
-        )
+        if existing_member.status == GroupMemberStatusEnum.banned:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This user is banned from the group"
+            )
+        if existing_member.status == GroupMemberStatusEnum.active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Member is already active in group"
+            )
+        
+        # Reactivate member if they were left/removed/inactive
+        existing_member.status = GroupMemberStatusEnum.active
+        existing_member.role = member_data.role
+        existing_member.joined_at = datetime.now()
+        db.commit()
+        db.refresh(existing_member)
+        return get_group_member_by_id(db, existing_member.group_member_id)
     
-    # Check if group is full
-    member_count = db.query(GroupMember).filter(
-        GroupMember.group_id == group_id
+    # Check if group is full (only count active members)
+    active_member_count = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.status == GroupMemberStatusEnum.active
     ).count()
     
-    if member_count >= group.max_members:
+    if active_member_count >= group.max_members:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Group is full"
         )
     
-    # Add member
+    # Add new member
     member = GroupMember(
         account_id=member_data.account_id,
         group_id=group_id,
-        role=member_data.role
+        role=member_data.role,
+        status=GroupMemberStatusEnum.active
     )
     
     db.add(member)
@@ -204,10 +222,13 @@ def get_group_member_by_id(db: Session, member_id: UUID) -> GroupMemberOut:
     return member_out
 
 def get_group_members(db: Session, group_id: UUID) -> List[GroupMemberOut]:
-    """Get all members of a group"""
+    """Get all active members of a group"""
     members = db.query(GroupMember).options(
         joinedload(GroupMember.account)
-    ).filter(GroupMember.group_id == group_id).all()
+    ).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.status == GroupMemberStatusEnum.active  # Only active members
+    ).all()
     
     result = []
     for member in members:
@@ -227,7 +248,7 @@ def get_group_members_with_search(
     limit: int = 20,
     search: str = None
 ) -> dict:
-    """Get group members with search and pagination"""
+    """Get active group members with search and pagination"""
     from app.db.models.account import Account
     
     # Check if group exists
@@ -238,10 +259,13 @@ def get_group_members_with_search(
             detail="Group not found"
         )
     
-    # Build query
+    # Build query - only active members
     query = db.query(GroupMember).options(
         joinedload(GroupMember.account)
-    ).filter(GroupMember.group_id == group_id)
+    ).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.status == GroupMemberStatusEnum.active
+    )
     
     # Add search filter if provided
     if search and search.strip():
@@ -284,7 +308,7 @@ def send_group_message(
     message_data: GroupMessageCreate, 
     sender_id: UUID
 ) -> GroupMessageOut:
-    """Send a message to a group"""
+    """Send a message to a group (only active members can send)"""
     
     # Check if group exists
     group = db.query(Group).filter(Group.group_id == message_data.group_id).first()
@@ -294,16 +318,17 @@ def send_group_message(
             detail="Group not found"
         )
     
-    # Check if sender is a member of the group
+    # Check if sender is an active member of the group
     member = db.query(GroupMember).filter(
         GroupMember.group_id == message_data.group_id,
-        GroupMember.account_id == sender_id
+        GroupMember.account_id == sender_id,
+        GroupMember.status == GroupMemberStatusEnum.active
     ).first()
     
     if not member:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You must be a member of the group to send messages"
+            detail="You must be an active member of the group to send messages"
         )
     
     # Create the message
@@ -340,18 +365,19 @@ def get_group_chat_history(
     skip: int = 0, 
     limit: int = 50
 ) -> GroupMessageList:
-    """Get chat history of a group"""
+    """Get chat history of a group (only active members can view)"""
     
-    # Check if user is a member of the group
+    # Check if user is an active member of the group
     member = db.query(GroupMember).filter(
         GroupMember.group_id == group_id,
-        GroupMember.account_id == user_id
+        GroupMember.account_id == user_id,
+        GroupMember.status == GroupMemberStatusEnum.active
     ).first()
     
     if not member:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You must be a member of the group to view chat history"
+            detail="You must be an active member of the group to view chat history"
         )
     
     # Get messages
@@ -575,27 +601,30 @@ def create_group_chat_transaction(
         raise HTTPException(status_code=500, detail=f"Failed to create group chat: {str(e)}")
 
 def get_my_group_chats(db: Session, user_id: UUID) -> List[dict]:
-    """Lấy danh sách group chat mà user hiện tại tham gia"""
+    """Get list of group chats where user is an active member"""
     from app.db.models.account import Account
-    # Lấy tất cả group chat mà user tham gia
+    
+    # Get only groups where user is active member
     my_groups = db.query(Group, GroupMember).join(
         GroupMember, Group.group_id == GroupMember.group_id
     ).filter(
         GroupMember.account_id == user_id,
+        GroupMember.status == GroupMemberStatusEnum.active,  # Only active memberships
         Group.is_chat_group == True
     ).all()
     
     result = []
     for group, member in my_groups:
-        # Lấy thông tin topic
+        # Get topic info
         topic = db.query(Topic).filter(Topic.topic_id == group.topic_id).first()
         
-        # Đếm số thành viên
+        # Count active members only
         member_count = db.query(GroupMember).filter(
-            GroupMember.group_id == group.group_id
+            GroupMember.group_id == group.group_id,
+            GroupMember.status == GroupMemberStatusEnum.active
         ).count()
         
-        # Lấy thông tin leader
+        # Get leader info
         leader = db.query(Account).filter(Account.account_id == group.group_leader).first()
         
         result.append({
@@ -607,6 +636,7 @@ def get_my_group_chats(db: Session, user_id: UUID) -> List[dict]:
             "member_count": member_count,
             "max_members": group.max_members,
             "my_role": member.role.value if hasattr(member.role, 'value') else str(member.role),
+            "my_status": member.status.value if hasattr(member.status, 'value') else str(member.status),
             "leader_name": leader.full_name if leader else None,
             "created_at": group.created_at,
             "joined_at": member.joined_at
@@ -720,31 +750,108 @@ def remove_member_from_group(
     account_id: UUID,
     current_user_id: UUID
 ) -> bool:
-    """Xóa thành viên khỏi group (chỉ leader/moderator mới có quyền)"""
-    from app.db.models.group_member import GroupMember, GroupMemberRoleEnum
-    # Kiểm tra group tồn tại
+    """Remove member from group (set status to 'removed')"""
+    
+    # Check if group exists
     group = db.query(Group).filter(Group.group_id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
-    # Kiểm tra quyền
+    
+    # Check permission - only active leaders/moderators can remove
     current_member = db.query(GroupMember).filter(
         GroupMember.group_id == group_id,
-        GroupMember.account_id == current_user_id
+        GroupMember.account_id == current_user_id,
+        GroupMember.status == GroupMemberStatusEnum.active
     ).first()
+    
     if not current_member or current_member.role not in [GroupMemberRoleEnum.leader, GroupMemberRoleEnum.moderator]:
-        raise HTTPException(status_code=403, detail="Only leader or moderator can remove members")
-    # Không cho leader tự xóa mình
+        raise HTTPException(status_code=403, detail="Only active leaders or moderators can remove members")
+    
+    # Leader cannot remove themselves
     if account_id == current_user_id and current_member.role == GroupMemberRoleEnum.leader:
         raise HTTPException(status_code=400, detail="Leader cannot remove themselves")
-    # Kiểm tra thành viên cần xóa
+    
+    # Find member to remove
     member = db.query(GroupMember).filter(
         GroupMember.group_id == group_id,
         GroupMember.account_id == account_id
     ).first()
+    
     if not member:
         raise HTTPException(status_code=404, detail="Member not found in group")
-    db.delete(member)
+    
+    if member.status != GroupMemberStatusEnum.active:
+        raise HTTPException(status_code=400, detail="Member is not active in group")
+    
+    # Set status to removed instead of deleting
+    member.status = GroupMemberStatusEnum.removed
     db.commit()
+    
+    return True
+
+def leave_group_chat(
+    db: Session,
+    group_id: UUID,
+    user_id: UUID
+) -> bool:
+    """Leave group chat (set status to 'left')"""
+    
+    # Find membership
+    member = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.account_id == user_id
+    ).first()
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="You are not a member of this group")
+    
+    if member.status != GroupMemberStatusEnum.active:
+        raise HTTPException(status_code=400, detail="You are not an active member of this group")
+    
+    # Set status to left
+    member.status = GroupMemberStatusEnum.left
+    db.commit()
+    
+    return True
+
+def ban_member_from_group(
+    db: Session,
+    group_id: UUID,
+    account_id: UUID,
+    current_user_id: UUID
+) -> bool:
+    """Ban member from group (set status to 'banned') - only leaders can ban"""
+    
+    # Check permission - only active leaders can ban
+    current_member = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.account_id == current_user_id,
+        GroupMember.status == GroupMemberStatusEnum.active
+    ).first()
+    
+    if not current_member or current_member.role != GroupMemberRoleEnum.leader:
+        raise HTTPException(status_code=403, detail="Only active leaders can ban members")
+    
+    # Cannot ban yourself
+    if account_id == current_user_id:
+        raise HTTPException(status_code=400, detail="Cannot ban yourself")
+    
+    # Find member to ban
+    member = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.account_id == account_id
+    ).first()
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found in group")
+    
+    if member.status == GroupMemberStatusEnum.banned:
+        raise HTTPException(status_code=400, detail="Member is already banned")
+    
+    # Set status to banned
+    member.status = GroupMemberStatusEnum.banned
+    db.commit()
+    
     return True
 
 def get_all_group_chats(
@@ -754,7 +861,7 @@ def get_all_group_chats(
     search: str = None,
     topic_id: UUID = None
 ) -> dict:
-    """Get all group chats with pagination and search (search có thể rỗng hoặc bất kỳ độ dài nào)"""
+    """Get all group chats with active member count"""
     
     # Base query for group chats
     query = db.query(Group).options(
@@ -781,9 +888,10 @@ def get_all_group_chats(
     
     result = []
     for group in groups:
-        # Get member count
+        # Get active member count only
         member_count = db.query(GroupMember).filter(
-            GroupMember.group_id == group.group_id
+            GroupMember.group_id == group.group_id,
+            GroupMember.status == GroupMemberStatusEnum.active
         ).count()
         
         # Get message count
@@ -805,7 +913,7 @@ def get_all_group_chats(
             "topic_id": group.topic_id,
             "topic_name": group.topic.name if group.topic else None,
             "topic_status": str(group.topic.status) if group.topic and hasattr(group.topic.status, 'value') else str(group.topic.status) if group.topic else None,
-            "member_count": member_count,
+            "member_count": member_count,  # Active members only
             "max_members": group.max_members,
             "message_count": message_count,
             "group_leader": group.group_leader,
@@ -837,7 +945,7 @@ def join_group_chat(
     group_id: UUID,
     user_id: UUID
 ) -> GroupMemberOut:
-    """Join a group chat (user, moderator, admin can join)"""
+    """Join a group chat with status logic"""
     
     # Check if group exists and is a chat group
     group = db.query(Group).filter(
@@ -858,34 +966,49 @@ def join_group_chat(
             detail="Group chat is not active"
         )
     
-    # Check if user is already a member
+    # Check existing membership
     existing_member = db.query(GroupMember).filter(
         GroupMember.group_id == group_id,
         GroupMember.account_id == user_id
     ).first()
     
     if existing_member:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You are already a member of this group"
-        )
+        if existing_member.status == GroupMemberStatusEnum.banned:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are banned from this group"
+            )
+        if existing_member.status == GroupMemberStatusEnum.active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You are already an active member of this group"
+            )
+        
+        # Rejoin if was left/removed/inactive - just update status
+        existing_member.status = GroupMemberStatusEnum.active
+        existing_member.joined_at = datetime.now()
+        db.commit()
+        db.refresh(existing_member)
+        return get_group_member_by_id(db, existing_member.group_member_id)
     
-    # Check if group is full
-    member_count = db.query(GroupMember).filter(
-        GroupMember.group_id == group_id
+    # Check if group is full (only count active members)
+    active_member_count = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.status == GroupMemberStatusEnum.active
     ).count()
     
-    if member_count >= group.max_members:
+    if active_member_count >= group.max_members:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Group is full (maximum 50 members)"
         )
     
-    # Add user as member
+    # Add user as new active member
     member = GroupMember(
         account_id=user_id,
         group_id=group_id,
-        role=GroupMemberRoleEnum.member
+        role=GroupMemberRoleEnum.member,
+        status=GroupMemberStatusEnum.active
     )
     
     db.add(member)
@@ -895,20 +1018,21 @@ def join_group_chat(
     return get_group_member_by_id(db, member.group_member_id)
 
 def update_user_groups_in_manager(db: Session, user_id: UUID):
-    """Update the user's groups list in the WebSocket manager"""
+    """Update user's groups in WebSocket manager (only active memberships)"""
     from app.core.websocket_manager import manager
     
-    # Get user's groups where user is a member
+    # Get user's active groups only
     user_groups = db.query(Group).join(GroupMember).filter(
         GroupMember.account_id == user_id,
+        GroupMember.status == GroupMemberStatusEnum.active,  # Only active memberships
         Group.is_chat_group == True
     ).all()
     
     group_ids = [group.group_id for group in user_groups]
     
-    # Add user to groups without removing from existing ones
+    # Add user to active groups
     for group_id in group_ids:
         if not manager.is_group_member(user_id, group_id):
             manager.join_group(user_id, group_id)
     
-    logger.info(f"Updated groups for user {user_id}: {group_ids}") 
+    logger.info(f"Updated active groups for user {user_id}: {group_ids}")
