@@ -33,7 +33,8 @@ class Settings(BaseSettings):
     CLIENT_ID: str
     CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str = "https://swd.nhducminhqt.name.vn/auth/google/callback"
-    FRONTEND_URL: str = "https://swd.nhducminhqt.name.vn"
+    FRONTEND_URL: str = "http://localhost:5173"
+    BACKEND_URL: str = "http://localhost:8000"
 
 
     # Security settings

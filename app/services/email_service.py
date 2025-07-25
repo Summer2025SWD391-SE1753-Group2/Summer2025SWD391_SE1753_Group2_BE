@@ -32,14 +32,14 @@ async def send_confirmation_email(email: str, username: str):
     token = jwt.encode(token_data, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     
     # Create confirmation link - BE xác thực, FE sẽ nhận redirect về login
-    confirmation_link = f"http://54.169.148.165:8000/api/v1/accounts/accounts/confirm-email?token={token}"
+    confirmation_link = f"{settings.BACKEND_URL}{settings.API_V1_STR}/accounts/confirm-email?token={token}"
     
     # Load and render template
     template = env.get_template('email_confirmation.html')
     html_content = template.render(
         project_name=settings.PROJECT_NAME,
-        username=username,
-        confirmation_link=confirmation_link,
+        name=username,
+        verification_link=confirmation_link,
         expire_hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS
     )
     
@@ -62,11 +62,10 @@ async def send_reset_password_email(email: str, username: str):
         "exp": datetime.now(timezone.utc) + timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
     }
     token = jwt.encode(token_data, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
-    
-    # Create reset password link
-    reset_link = f"https://swd.nhducminhqt.name.vn/reset-password?token={token}"
 
-    
+    # Create reset password link
+    reset_link = f"{settings.BACKEND_URL}{settings.API_V1_STR}/accounts/reset-password?token={token}"
+
     # Load and render template
     template = env.get_template('reset_password.html')
     html_content = template.render(

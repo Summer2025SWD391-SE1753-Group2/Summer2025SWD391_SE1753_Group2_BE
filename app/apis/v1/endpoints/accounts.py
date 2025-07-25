@@ -12,24 +12,27 @@ from app.core import settings
 
 router = APIRouter()
 
+DEFAULT_FE_URL = 'http://localhost:5173'
+
 @router.get("/confirm-email")
 async def confirm_email_get(token: str = Query(...), db: Session = Depends(get_db)):
     """
     Confirm email with token (GET method)
     """
     try:
-        account = await confirm_email(db, token)
-        # Redirect về FE login kèm thông báo thành công
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'https://swd.nhducminhqt.name.vn')
-        redirect_url = f"{frontend_url}/auth/login?email_confirmed=success"
+        await confirm_email(db, token)
+        # Redirect về FE /verify-success
+        frontend_url = getattr(settings, 'FRONTEND_URL', DEFAULT_FE_URL)
+        redirect_url = f"{frontend_url}/verify-success"
         return RedirectResponse(url=redirect_url)
     except HTTPException as e:
-        raise e
+        frontend_url = getattr(settings, 'FRONTEND_URL', DEFAULT_FE_URL)
+        redirect_url = f"{frontend_url}/verify-failed"
+        return RedirectResponse(url=redirect_url)
     except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Failed to confirm email: {str(e)}"
-        )
+        frontend_url = getattr(settings, 'FRONTEND_URL', DEFAULT_FE_URL)
+        redirect_url = f"{frontend_url}/verify-failed"
+        return RedirectResponse(url=redirect_url)
 
 @router.post("/confirm-email")
 async def confirm_email_post(token: str = Query(...), db: Session = Depends(get_db)):

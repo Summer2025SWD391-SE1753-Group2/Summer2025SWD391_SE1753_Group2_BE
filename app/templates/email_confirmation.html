@@ -3,156 +3,296 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Xác nhận Email của bạn - {{ project_name }}</title>
+    <title>Xác minh tài khoản - Food Forum</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body
+    style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 25%, #FF6B9D 50%, #C44569 75%, #F8B500 100%); background-size: 400% 400%; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; min-height: 100vh;">
+
+    <!-- Floating food icons background -->
+    <div
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; opacity: 0.1;">
+        <div style="position: absolute; top: 10%; left: 5%; font-size: 40px; animation: float 6s ease-in-out infinite;">
+            🍕</div>
+        <div
+            style="position: absolute; top: 20%; right: 10%; font-size: 35px; animation: float 8s ease-in-out infinite 2s;">
+            🍔</div>
+        <div
+            style="position: absolute; top: 50%; left: 8%; font-size: 45px; animation: float 7s ease-in-out infinite 1s;">
+            🍜</div>
+        <div
+            style="position: absolute; bottom: 30%; right: 15%; font-size: 38px; animation: float 9s ease-in-out infinite 3s;">
+            🥗</div>
+        <div
+            style="position: absolute; bottom: 10%; left: 12%; font-size: 42px; animation: float 6s ease-in-out infinite 4s;">
+            🍰</div>
+        <div
+            style="position: absolute; top: 60%; right: 5%; font-size: 36px; animation: float 8s ease-in-out infinite 1.5s;">
+            🍣</div>
+        <div
+            style="position: absolute; top: 35%; left: 50%; font-size: 40px; animation: float 7s ease-in-out infinite 2.5s;">
+            🥘</div>
+    </div>
+
+    <!-- Wrapper table for better email client compatibility -->
+    <table cellpadding="0" cellspacing="0" border="0" width="100%"
+        style="background: transparent; min-height: 100vh; position: relative; z-index: 2;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+
+                <!-- Main email container -->
+                <table cellpadding="0" cellspacing="0" border="0" width="800"
+                    style="max-width: 800px; width: 100%; background-color: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15); overflow: hidden; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);">
+
+                    <!-- Header with food theme -->
+                    <tr>
+                        <td
+                            style="background: linear-gradient(45deg, #FF6B35, #F7931E); color: #ffffff; padding: 50px 40px; text-align: center; position: relative;">
+                            <!-- Food icons in header -->
+                            <div style="position: absolute; top: 20px; left: 30px; font-size: 30px; opacity: 0.3;">🍴
+                            </div>
+                            <div style="position: absolute; top: 20px; right: 30px; font-size: 30px; opacity: 0.3;">🥄
+                            </div>
+                            <div style="position: absolute; bottom: 20px; left: 40px; font-size: 25px; opacity: 0.3;">
+                                👨‍🍳</div>
+                            <div style="position: absolute; bottom: 20px; right: 40px; font-size: 25px; opacity: 0.3;">
+                                🍽️</div>
+
+                            <div style="font-size: 48px; margin-bottom: 15px;">🍽️</div>
+                            <h1
+                                style="margin: 0; font-size: 36px; font-weight: 700; color: #ffffff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
+                                Food Forum</h1>
+                            <p
+                                style="margin: 10px 0 0 0; font-size: 18px; color: rgba(255,255,255,0.9); font-weight: 300;">
+                                Xác minh tài khoản của bạn</p>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 50px 40px;">
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr>
+                                    <td>
+                                        <div style="text-align: center; margin-bottom: 30px;">
+                                            <span style="font-size: 60px;">👋</span>
+                                        </div>
+
+                                        <h2
+                                            style="margin: 0 0 25px 0; font-size: 24px; color: #333; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; text-align: center; font-weight: 600;">
+                                            Chào {{name}}!</h2>
+
+                                        <p
+                                            style="margin: 0 0 30px 0; font-size: 18px; color: #555; line-height: 1.8; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; text-align: center;">
+                                            Chào mừng bạn đến với <strong style="color: #FF6B35;">Food Forum</strong> -
+                                            nơi chia sẻ đam mê ẩm thực! 🍳</p>
+
+                                        <p
+                                            style="margin: 0 0 40px 0; font-size: 16px; color: #666; line-height: 1.7; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; text-align: center;">
+                                            Cảm ơn bạn đã đăng ký. Vui lòng xác minh địa chỉ email của bạn bằng cách
+                                            nhấn nút bên dưới để bắt đầu khám phá thế giới ẩm thực cùng chúng tôi!</p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Button container -->
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding: 30px 0;">
+                                        <a href="{{verification_link}}" target="_blank"
+                                            style="display: inline-block; padding: 18px 40px; background: linear-gradient(45deg, #FF6B35, #F7931E); color: #ffffff !important; text-decoration: none; border-radius: 50px; font-size: 18px; font-weight: bold; text-align: center; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; border: none; cursor: pointer; box-shadow: 0 8px 20px rgba(255, 107, 53, 0.3); transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 1px; mso-hide: all;">🍴
+                                            Xác minh Email 🍴</a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Features preview -->
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 40px;">
+                                <tr>
+                                    <td>
+                                        <div
+                                            style="background: linear-gradient(135deg, #FFF8E7, #FFE8CC); padding: 30px; border-radius: 15px; text-align: center; border: 2px solid #FFE0B8;">
+                                            <h3
+                                                style="margin: 0 0 20px 0; color: #D2691E; font-size: 20px; font-weight: 600;">
+                                                Sau khi xác minh, bạn có thể:</h3>
+                                            <div
+                                                style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-top: 20px;">
+                                                <div style="text-align: center; min-width: 120px; margin: 10px;">
+                                                    <div style="font-size: 32px; margin-bottom: 8px;">📝</div>
+                                                    <p
+                                                        style="margin: 0; font-size: 14px; color: #8B4513; font-weight: 500;">
+                                                        Chia sẻ công thức</p>
+                                                </div>
+                                                <div style="text-align: center; min-width: 120px; margin: 10px;">
+                                                    <div style="font-size: 32px; margin-bottom: 8px;">📸</div>
+                                                    <p
+                                                        style="margin: 0; font-size: 14px; color: #8B4513; font-weight: 500;">
+                                                        Đăng ảnh món ăn</p>
+                                                </div>
+                                                <div style="text-align: center; min-width: 120px; margin: 10px;">
+                                                    <div style="font-size: 32px; margin-bottom: 8px;">💬</div>
+                                                    <p
+                                                        style="margin: 0; font-size: 14px; color: #8B4513; font-weight: 500;">
+                                                        Thảo luận ẩm thực</p>
+                                                </div>
+                                                <div style="text-align: center; min-width: 120px; margin: 10px;">
+                                                    <div style="font-size: 32px; margin-bottom: 8px;">⭐</div>
+                                                    <p
+                                                        style="margin: 0; font-size: 14px; color: #8B4513; font-weight: 500;">
+                                                        Đánh giá nhà hàng</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 40px;">
+                                <tr>
+                                    <td>
+                                        <p
+                                            style="margin: 0 0 10px 0; font-size: 14px; color: #888; line-height: 1.5; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; text-align: center;">
+                                            Nếu nút không hoạt động, bạn có thể sao chép và dán liên kết sau:</p>
+                                        <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 15px; border-radius: 10px; border: 2px dashed #FF6B35; margin: 15px 0; cursor: pointer;"
+                                            onclick="copyToClipboard(this)" title="Nhấp để sao chép">
+                                            <p
+                                                style="margin: 0; font-size: 13px; color: #FF6B35; word-break: break-all; font-family: 'Courier New', Courier, monospace; text-align: center; font-weight: 600;">
+                                                {{verification_link}}</p>
+                                        </div>
+
+                                        <script>
+                                            function copyToClipboard(element) {
+                                                const text = element.querySelector('p').textContent;
+                                                if (navigator.clipboard && navigator.clipboard.writeText) {
+                                                    navigator.clipboard.writeText(text).then(function () {
+                                                        element.style.background = 'linear-gradient(135deg, #d4edda, #c3e6cb)';
+                                                        element.style.borderColor = '#28a745';
+                                                        const p = element.querySelector('p');
+                                                        const originalText = p.textContent;
+                                                        p.textContent = '✅ Đã sao chép vào clipboard!';
+                                                        p.style.color = '#28a745';
+                                                        setTimeout(function () {
+                                                            element.style.background = 'linear-gradient(135deg, #f8f9fa, #e9ecef)';
+                                                            element.style.borderColor = '#FF6B35';
+                                                            p.textContent = originalText;
+                                                            p.style.color = '#FF6B35';
+                                                        }, 2000);
+                                                    });
+                                                } else {
+                                                    // Fallback for older browsers
+                                                    const textArea = document.createElement('textarea');
+                                                    textArea.value = text;
+                                                    document.body.appendChild(textArea);
+                                                    textArea.select();
+                                                    document.execCommand('copy');
+                                                    document.body.removeChild(textArea);
+
+                                                    element.style.background = 'linear-gradient(135deg, #d4edda, #c3e6cb)';
+                                                    element.style.borderColor = '#28a745';
+                                                    const p = element.querySelector('p');
+                                                    const originalText = p.textContent;
+                                                    p.textContent = '✅ Đã sao chép!';
+                                                    p.style.color = '#28a745';
+                                                    setTimeout(function () {
+                                                        element.style.background = 'linear-gradient(135deg, #f8f9fa, #e9ecef)';
+                                                        element.style.borderColor = '#FF6B35';
+                                                        p.textContent = originalText;
+                                                        p.style.color = '#FF6B35';
+                                                    }, 2000);
+                                                }
+                                            }
+                                        </script>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td
+                            style="background: linear-gradient(135deg, #2C3E50, #34495E); color: #ECF0F1; padding: 30px 40px; text-align: center; position: relative;">
+                            <div style="position: absolute; top: 15px; left: 30px; font-size: 20px; opacity: 0.3;">🌟
+                            </div>
+                            <div style="position: absolute; top: 15px; right: 30px; font-size: 20px; opacity: 0.3;">🌟
+                            </div>
+
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr>
+                                    <td align="center">
+                                        <p
+                                            style="margin: 0 0 15px 0; line-height: 1.6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px;">
+                                            Nếu bạn không yêu cầu email này, vui lòng bỏ qua.</p>
+                                        <p
+                                            style="margin: 0; font-size: 12px; opacity: 0.8; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+                                            &copy; 2025 Food Forum. Nền tảng chia sẻ ẩm thực hàng đầu Việt Nam 🇻🇳</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+    <!-- CSS animations for floating effect -->
     <style>
-        body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #f4f4f4;
-            /* Màu nền nhẹ cho toàn bộ email */
-            margin: 0;
-            padding: 0;
-            -webkit-text-size-adjust: 100%;
-            -ms-text-size-adjust: 100%;
-        }
+        @keyframes float {
 
-        .email-wrapper {
-            max-width: 600px;
-            margin: 20px auto;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-            /* Bóng đổ nhẹ */
-            overflow: hidden;
-            /* Đảm bảo góc bo tròn */
-        }
-
-        .header {
-            background-color: #4CAF50;
-            /* Màu xanh lá cây đậm cho header */
-            color: white;
-            padding: 30px 25px;
-            text-align: center;
-            border-top-left-radius: 8px;
-            border-top-right-radius: 8px;
-        }
-
-        .header h1 {
-            margin: 0;
-            font-size: 28px;
-            font-weight: 600;
-        }
-
-        .content {
-            padding: 25px;
-        }
-
-        .content p {
-            margin-bottom: 15px;
-            font-size: 16px;
-        }
-
-        .button-container {
-            text-align: center;
-            margin: 30px 0;
-        }
-
-        .button {
-            display: inline-block;
-            padding: 14px 28px;
-            background-color: #4CAF50;
-            /* Màu xanh lá cây cho nút */
-            color: white !important;
-            /* !important để đảm bảo màu chữ */
-            text-decoration: none;
-            border-radius: 6px;
-            font-size: 18px;
-            font-weight: bold;
-            transition: background-color 0.3s ease;
-            /* Hiệu ứng chuyển màu khi hover */
-        }
-
-        .button:hover {
-            background-color: #45a049;
-            /* Màu xanh lá cây đậm hơn khi hover */
-        }
-
-        .link-text {
-            word-break: break-all;
-            /* Ngắt từ để tránh tràn */
-            background-color: #f0f0f0;
-            padding: 10px 15px;
-            border-radius: 4px;
-            font-size: 14px;
-            color: #555;
-            display: block;
-            /* Để nó chiếm toàn bộ chiều rộng */
-        }
-
-        .footer {
-            background-color: #f9f9f9;
-            padding: 20px 25px;
-            text-align: center;
-            font-size: 13px;
-            color: #777;
-            border-bottom-left-radius: 8px;
-            border-bottom-right-radius: 8px;
-            border-top: 1px solid #eee;
-            /* Đường kẻ phân cách */
-        }
-
-        .footer p {
-            margin: 0;
-        }
-
-        /* Responsive adjustments */
-        @media only screen and (max-width: 620px) {
-            .email-wrapper {
-                margin: 0 !important;
-                border-radius: 0 !important;
-                box-shadow: none !important;
+            0%,
+            100% {
+                transform: translateY(0px) rotate(0deg);
             }
 
-            .header,
-            .content,
-            .footer {
-                padding: 20px !important;
+            50% {
+                transform: translateY(-20px) rotate(10deg);
+            }
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
             }
 
-            .header h1 {
-                font-size: 24px !important;
+            50% {
+                background-position: 100% 50%;
             }
 
-            .button {
-                padding: 12px 20px !important;
-                font-size: 16px !important;
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .email-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(255, 107, 53, 0.4) !important;
+        }
+
+        /* Mobile responsive */
+        @media only screen and (max-width: 850px) {
+            .email-container {
+                width: 95% !important;
+                margin: 10px !important;
+            }
+
+            .email-content {
+                padding: 30px 20px !important;
+            }
+
+            .email-header {
+                padding: 40px 25px !important;
+            }
+
+            .features-grid {
+                flex-direction: column !important;
             }
         }
     </style>
-</head>
 
-<body>
-    <div class="email-wrapper">
-        <div class="header">
-            <h1>Chào mừng bạn đến với {{ project_name }}!</h1>
-        </div>
-        <div class="content">
-            <p>Chào {{ username }},</p>
-            <p>Cảm ơn bạn đã đăng ký. Vui lòng xác nhận địa chỉ email của bạn bằng cách nhấp vào nút bên dưới:</p>
-            <div class="button-container">
-                <a href="{{ confirmation_link }}" class="button">Xác nhận Email của bạn</a>
-            </div>
-            <p>Hoặc sao chép và dán liên kết này vào trình duyệt của bạn:</p>
-            <p><span class="link-text">{{ confirmation_link }}</span></p>
-            <p>Liên kết này sẽ hết hạn sau {{ expire_hours }} giờ.</p>
-            <p>Nếu bạn không tạo tài khoản, vui lòng bỏ qua email này.</p>
-        </div>
-        <div class="footer">
-            <p>Đây là một tin nhắn tự động, vui lòng không trả lời email này.</p>
-            <p>&copy; 2025 {{ project_name }}. Tất cả các quyền được bảo lưu.</p>
-        </div>
-    </div>
 </body>
 
 </html>
