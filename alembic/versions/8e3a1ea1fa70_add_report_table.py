@@ -20,14 +20,20 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # Chỉ tạo bảng report
+    # Chỉ tạo bảng report, enum đã tạo thủ công ở DB
     op.create_table(
         'report',
         sa.Column('report_id', postgresql.UUID(as_uuid=True), primary_key=True, nullable=False, index=True),
         sa.Column('title', sa.String(length=255), nullable=False),
-        sa.Column('type', sa.Enum('Report_material', 'Report_tag', 'Report_topic', 'Report_post', 'Report_other', name='reporttypeenum'), nullable=False),
+        sa.Column('type', sa.Enum(
+            'Report_material', 'Report_tag', 'Report_topic', 'Report_post', 'Report_other',
+            name='reporttypeenum', create_type=False
+        ), nullable=False),
         sa.Column('reason', sa.String(length=255), nullable=False),
-        sa.Column('status', sa.Enum('PENDING', 'APPROVE', 'REJECT', name='reportstatusenum'), nullable=False, server_default='PENDING'),
+        sa.Column('status', sa.Enum(
+            'PENDING', 'APPROVE', 'REJECT',
+            name='reportstatusenum', create_type=False
+        ), nullable=False, server_default='PENDING'),
         sa.Column('description', sa.Text, nullable=True),
         sa.Column('reject_reason', sa.Text, nullable=True),
         sa.Column('created_by', postgresql.UUID(as_uuid=True), sa.ForeignKey('account.account_id'), nullable=False),

@@ -20,10 +20,15 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # Thêm cột object_add và unit vào bảng report nếu chưa có
+    from sqlalchemy import inspect
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    columns = [col['name'] for col in inspector.get_columns('report')]
     with op.batch_alter_table('report') as batch_op:
-        batch_op.add_column(sa.Column('object_add', sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column('unit', sa.String(255), nullable=True))
+        if 'object_add' not in columns:
+            batch_op.add_column(sa.Column('object_add', sa.Text(), nullable=True))
+        if 'unit' not in columns:
+            batch_op.add_column(sa.Column('unit', sa.String(255), nullable=True))
 
 
 def downgrade() -> None:

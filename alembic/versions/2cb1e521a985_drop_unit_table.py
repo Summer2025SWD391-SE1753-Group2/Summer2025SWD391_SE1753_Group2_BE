@@ -20,7 +20,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.drop_constraint('post_material_unit_fkey', 'post_material', type_='foreignkey')
+    from sqlalchemy import inspect
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    constraints = [fk['name'] for fk in inspector.get_foreign_keys('post_material')]
+    if 'post_material_unit_fkey' in constraints:
+        op.drop_constraint('post_material_unit_fkey', 'post_material', type_='foreignkey')
     # op.drop_table('unit')  # Đã comment để không xóa bảng unit
 
 

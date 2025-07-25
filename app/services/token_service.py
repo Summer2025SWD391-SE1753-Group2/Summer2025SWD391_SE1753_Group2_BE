@@ -99,7 +99,8 @@ class TokenService:
             access_token=access_token,
             refresh_token=refresh_token,
             expires_at=expires_at,
-            is_active=True # Explicitly set as active
+            is_active=True, # Explicitly set as active
+            token_type="access"  # Explicitly set type
         )
         db.add(token_record)
         db.commit()
@@ -138,3 +139,107 @@ class TokenService:
             synchronize_session=False # Use synchronize_session=False for bulk updates
         )
         db.commit()
+
+    @staticmethod
+    def create_reset_password_token_record(db: Session, account: Account, reset_token: str, expires_at: datetime) -> Token:
+        """
+        Lưu token reset password vào DB.
+        Deactivate tất cả reset_password tokens cũ để chỉ có 1 token active tại 1 thời điểm.
+        """
+        
+        # Deactivate tất cả reset_password tokens cũ của user này
+        db.query(Token).filter(
+            Token.account_id == account.account_id,
+            Token.is_active == True,
+            Token.token_type == "reset_password"  # CHỈ deactivate reset_password tokens
+        ).update({"is_active": False}, synchronize_session=False)
+        
+        # Tạo token record mới
+        token_record = Token(
+            account_id=account.account_id,
+            access_token=reset_token,
+            refresh_token=None,
+            is_active=True,
+            created_at=datetime.now(timezone.utc),
+            expires_at=expires_at,
+            token_type="reset_password"
+        )
+        db.add(token_record)
+        db.commit()
+        db.refresh(token_record)
+        
+        print(f"✅ Created reset_password token for user {account.username}")
+        print(f"   Token ID: {token_record.token_id}")
+        print(f"   Expires at: {expires_at}")
+        
+        return token_record
+
+    # BONUS: Thêm method cleanup expired tokens
+    @staticmethod
+    def cleanup_expired_tokens(db: Session):
+        """
+        Cleanup các tokens đã hết hạn để giữ database sạch sẽ
+        """
+        current_time = datetime.now(timezone.utc)
+        
+        # Deactivate expired tokens
+        expired_count = db.query(Token).filter(
+            Token.is_active == True,
+            Token.expires_at < current_time
+        ).update({"is_active": False}, synchronize_session=False)
+        
+        db.commit()
+        
+        if expired_count > 0:
+            print(f"🧹 Cleaned up {expired_count} expired tokens")
+        
+        return expired_count
+
+    # BONUS: Method để revoke tất cả tokens của user (dùng khi ban user)
+    @staticmethod  
+    def revoke_all_user_tokens(db: Session, account_id: uuid.UUID):
+        """
+        Revoke tất cả tokens của user (dùng khi ban account)
+        """
+        revoked_count = db.query(Token).filter(
+            Token.account_id == account_id,
+            Token.is_active == True
+        ).update({"is_active": False}, synchronize_session=False)
+        
+        db.commit()
+        
+        print(f"🚫 Revoked {revoked_count} tokens for user {account_id}")
+        return revoked_count
+
+    # BONUS: Method để get token statistics
+    @staticmethod
+    def get_user_token_stats(db: Session, account_id: uuid.UUID):
+        """
+        Lấy thống kê tokens của user để debug
+        """
+        tokens = db.query(Token).filter(Token.account_id == account_id).all()
+        
+        stats = {
+            "total": len(tokens),
+            "active": len([t for t in tokens if t.is_active]),
+            "by_type": {},
+            "expired": 0
+        }
+        
+        current_time = datetime.now(timezone.utc)
+        
+        for token in tokens:
+            # Count by type
+            token_type = token.token_type
+            if token_type not in stats["by_type"]:
+                stats["by_type"][token_type] = {"total": 0, "active": 0}
+            
+            stats["by_type"][token_type]["total"] += 1
+            if token.is_active:
+                stats["by_type"][token_type]["active"] += 1
+            
+            # Count expired
+            if token.expires_at and token.expires_at < current_time:
+                stats["expired"] += 1
+        
+        return stats

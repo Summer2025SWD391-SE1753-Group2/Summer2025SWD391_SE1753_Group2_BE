@@ -20,17 +20,22 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.add_column('material', sa.Column('unit_id', sa.UUID(), nullable=True))
-    # Cập nhật dữ liệu unit_id dựa vào tên đơn vị cũ
-    op.execute('''
-        UPDATE material
-        SET unit_id = u.unit_id
-        FROM unit u
-        WHERE material.unit = u.name
-    ''')
-    op.alter_column('material', 'unit_id', nullable=False)
-    op.create_foreign_key(None, 'material', 'unit', ['unit_id'], ['unit_id'])
-    op.drop_column('material', 'unit')
+    from sqlalchemy import inspect
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    columns = [col['name'] for col in inspector.get_columns('material')]
+    if 'unit_id' not in columns:
+        op.add_column('material', sa.Column('unit_id', sa.UUID(), nullable=True))
+        # Cập nhật dữ liệu unit_id dựa vào tên đơn vị cũ
+        op.execute('''
+            UPDATE material
+            SET unit_id = u.unit_id
+            FROM unit u
+            WHERE material.unit = u.name
+        ''')
+        op.alter_column('material', 'unit_id', nullable=False)
+        op.create_foreign_key(None, 'material', 'unit', ['unit_id'], ['unit_id'])
+        op.drop_column('material', 'unit')
 
 
 def downgrade() -> None:

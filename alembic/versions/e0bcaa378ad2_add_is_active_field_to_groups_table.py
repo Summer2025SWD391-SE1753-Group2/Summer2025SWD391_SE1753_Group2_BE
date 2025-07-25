@@ -20,8 +20,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # Add is_active column to groups table
-    op.add_column('groups', sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'))
+    from sqlalchemy import inspect
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    columns = [col['name'] for col in inspector.get_columns('groups')]
+    if 'is_active' not in columns:
+        op.add_column('groups', sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'))
 
 
 def downgrade() -> None:

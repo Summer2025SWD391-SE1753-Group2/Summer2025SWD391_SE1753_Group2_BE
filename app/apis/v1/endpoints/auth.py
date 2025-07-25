@@ -245,17 +245,24 @@ async def forgot_password(
             detail="Account is not active"
         )
 
-    # if account.phone_number and account.phone_verified:
-    #     await send_otp(account.phone_number)
-    #     return {
-    #         "message": "OTP sent to your phone number",
-    #         "method": "phone",
-    #         "username": account.username
-    #     }
-
-    await send_reset_password_email(account.email, account.username)
+    # Tạo token reset password
+    from app.services.token_service import TokenService
+    expire_delta = timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
+    expires_at = datetime.now(timezone.utc) + expire_delta
+    token_data = {
+        "sub": account.username,
+        "exp": expires_at,
+        "token_type": "reset_password"
+    }
+    import jwt
+    reset_token = jwt.encode(token_data, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    # Lưu token vào DB
+    TokenService.create_reset_password_token_record(db, account, reset_token, expires_at)
+    # Gửi email
+    from app.services.email_service import send_reset_password_email
+    await send_reset_password_email(account.email, account.username, reset_token)
     return {
-        "message": "Reset password instructions sent to your email",
+        "message": "Hướng dẫn đặt lại mật khẩu đã được gửi đến email của bạn",
         "method": "email",
         "username": account.username
     }
@@ -265,39 +272,89 @@ async def reset_password(
     request: ResetPasswordRequest,
     db: Session = Depends(get_db)
 ):
+    print("[DEBUG] Reset password request received")
     if request.new_password != request.confirm_password:
+        print("[DEBUG] Passwords do not match")
         raise HTTPException(
             status_code=400,
             detail="Passwords do not match"
         )
-
     try:
+        print("[DEBUG] Decoding JWT token...")
         payload = jwt.decode(request.token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
         username: str = payload.get("sub")
+        token_type: str = payload.get("token_type")
+        print(f"[DEBUG] Token payload: username={username}, token_type={token_type}")
         if username is None:
+            print("[DEBUG] Invalid token: missing username")
             raise HTTPException(
                 status_code=400,
-                detail="Invalid token"
+                detail="Invalid token: missing username"
             )
-
+        if token_type != "reset_password":
+            print("[DEBUG] Invalid token: wrong token type")
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid token: wrong token type"
+            )
         account = db.query(Account).filter(Account.username == username).first()
+        print(f"[DEBUG] Account lookup: {account}")
         if account is None:
+            print("[DEBUG] Account not found")
             raise HTTPException(
                 status_code=404,
                 detail="Account not found"
             )
-
+        from app.db.models.token import Token
+        token_record = db.query(Token).filter(
+            Token.access_token == request.token,
+            Token.is_active == True,
+            Token.token_type == "reset_password",
+            Token.account_id == account.account_id
+        ).first()
+        print(f"[DEBUG] Token record lookup: {token_record}")
+        if not token_record:
+            print("[DEBUG] Invalid or expired token (not found in DB)")
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid or expired token"
+            )
+        if token_record.expires_at and token_record.expires_at < datetime.now(timezone.utc):
+            print("[DEBUG] Token has expired")
+            token_record.is_active = False
+            db.commit()
+            raise HTTPException(
+                status_code=400,
+                detail="Token has expired"
+            )
+        print("[DEBUG] Updating password...")
         account.password_hash = get_password_hash(request.new_password)
+        token_record.is_active = False
+        db.query(Token).filter(
+            Token.account_id == account.account_id,
+            Token.is_active == True,
+            Token.token_type.in_(["access", "refresh"])
+        ).update({"is_active": False})
         db.commit()
-
+        print("[DEBUG] Password reset successful")
         return {
             "message": "Password reset successfully",
             "username": account.username
         }
-    except JWTError:
+    except JWTError as e:
+        print(f"[DEBUG] JWTError: {str(e)}")
         raise HTTPException(
             status_code=400,
             detail="Invalid or expired token"
+        )
+    except HTTPException as e:
+        print(f"[DEBUG] HTTPException: {str(e)}")
+        raise
+    except Exception as e:
+        print(f"[DEBUG] Unexpected error in reset password: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error"
         )
 
 @router.post("/reset-password-otp", response_model=ResetPasswordOTPResponse)
