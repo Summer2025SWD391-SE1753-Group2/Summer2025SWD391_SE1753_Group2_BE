@@ -27,25 +27,30 @@ def upgrade() -> None:
                existing_type=postgresql.TIMESTAMP(),
                type_=sa.DateTime(timezone=True),
                existing_nullable=True)
-    op.alter_column('feedback', 'priority',
-               existing_type=sa.VARCHAR(length=20),
-               type_=sa.Enum('low', 'medium', 'high', 'urgent', name='feedbackpriorityenum'),
-               existing_nullable=True,
-               existing_server_default=sa.text("'medium'::character varying"))
-    op.alter_column('feedback', 'status',
-               existing_type=sa.VARCHAR(length=20),
-               type_=sa.Enum('pending', 'in_progress', 'resolved', 'rejected', name='feedbackstatusenum'),
-               existing_nullable=True,
-               existing_server_default=sa.text("'pending'::character varying"))
+    # Create enum types for feedback if they don't exist
+    op.execute("DO $$ BEGIN CREATE TYPE feedbackpriorityenum AS ENUM ('low', 'medium', 'high', 'urgent'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
+    op.execute("DO $$ BEGIN CREATE TYPE feedbackstatusenum AS ENUM ('pending', 'in_progress', 'resolved', 'rejected'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
+    
+    # Alter feedback priority column with proper casting
+    op.execute("ALTER TABLE feedback ALTER COLUMN priority DROP DEFAULT")
+    op.execute("ALTER TABLE feedback ALTER COLUMN priority TYPE feedbackpriorityenum USING priority::feedbackpriorityenum")
+    op.execute("ALTER TABLE feedback ALTER COLUMN priority SET DEFAULT 'medium'::feedbackpriorityenum")
+    
+    # Alter feedback status column with proper casting
+    op.execute("ALTER TABLE feedback ALTER COLUMN status DROP DEFAULT")
+    op.execute("ALTER TABLE feedback ALTER COLUMN status TYPE feedbackstatusenum USING status::feedbackstatusenum")
+    op.execute("ALTER TABLE feedback ALTER COLUMN status SET DEFAULT 'pending'::feedbackstatusenum")
     op.drop_index('idx_feedback_created_at', table_name='feedback')
     op.drop_index('idx_feedback_created_by', table_name='feedback')
     op.drop_index('idx_feedback_status', table_name='feedback')
     op.drop_index('idx_feedback_type_id', table_name='feedback')
-    op.alter_column('feedback_type', 'status',
-               existing_type=sa.VARCHAR(length=20),
-               type_=sa.Enum('active', 'inactive', name='feedbacktypestatusenum'),
-               existing_nullable=True,
-               existing_server_default=sa.text("'active'::character varying"))
+    # Create enum type for feedback_type status if it doesn't exist
+    op.execute("DO $$ BEGIN CREATE TYPE feedbacktypestatusenum AS ENUM ('active', 'inactive'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
+    
+    # Alter feedback_type status column with proper casting
+    op.execute("ALTER TABLE feedback_type ALTER COLUMN status DROP DEFAULT")
+    op.execute("ALTER TABLE feedback_type ALTER COLUMN status TYPE feedbacktypestatusenum USING status::feedbacktypestatusenum")
+    op.execute("ALTER TABLE feedback_type ALTER COLUMN status SET DEFAULT 'active'::feedbacktypestatusenum")
     op.drop_constraint('feedback_type_name_key', 'feedback_type', type_='unique')
     op.drop_index('idx_feedback_type_name', table_name='feedback_type')
     op.create_index(op.f('ix_feedback_type_name'), 'feedback_type', ['name'], unique=True)
