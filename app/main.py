@@ -11,7 +11,7 @@ app = FastAPI(title=settings.PROJECT_NAME)
 # Thêm middleware CORS ngay sau khi khởi tạo app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://nhducminhqt.name.vn"],  # FE đang chạy ở cổng 5173
+    allow_origins=["http://localhost:5173", "https://swd.nhducminhqt.name.vn"],  # FE đang chạy ở cổng 5173
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
