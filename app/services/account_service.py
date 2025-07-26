@@ -71,12 +71,16 @@ def search_accounts_by_name(
         .all()
 
 
+
 async def create_account(db: Session, account: AccountCreate) -> Account:
     """
     Creates a new account in the database.
     Performs unique field checks, hashes the password, sets initial status,
     and sends a confirmation email.
     """
+    # Start a transaction explicitly
+    db.begin()
+    
     try:
         # Check unique constraints before creating
         check_unique_fields(db, username=account.username, email=account.email)
@@ -101,18 +105,32 @@ async def create_account(db: Session, account: AccountCreate) -> Account:
             updated_by=None
         )
 
+        # Add to session but don't commit yet
         db.add(db_account)
-        db.commit()
-        db.refresh(db_account)
-
+        db.flush()  # This generates the account_id without committing
+        
         # Update created_by and updated_by to the new account_id
         db_account.created_by = db_account.account_id
         db_account.updated_by = db_account.account_id
+        
+        # Validate all required fields before attempting to send email
+        if not db_account.email or not db_account.username:
+            raise ValueError("Missing required fields: email and username are required")
+        
+        # Try to send confirmation email BEFORE committing
+        try:
+            await send_confirmation_email(db_account.email, db_account.username)
+        except Exception as email_error:
+            # If email fails, rollback and raise error
+            db.rollback()
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Failed to send confirmation email: {str(email_error)}"
+            )
+        
+        # If email sent successfully, commit the transaction
         db.commit()
         db.refresh(db_account)
-
-        # Send confirmation email
-        await send_confirmation_email(db_account.email, db_account.username)
 
         return db_account
 
@@ -126,9 +144,17 @@ async def create_account(db: Session, account: AccountCreate) -> Account:
         elif "account_phone_number_key" in error_msg:
             raise HTTPException(status_code=400, detail="Phone number already exists")
         raise HTTPException(status_code=400, detail="Registration failed due to duplicate data")
-    except Exception as e:
+    except HTTPException:
+        # Re-raise HTTPException without additional handling
+        db.rollback()
+        raise
+    except ValueError as e:
+        # Handle validation errors
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Account creation failed: {str(e)}")
 
 
 async def confirm_email(db: Session, token: str) -> Account:
@@ -405,6 +431,12 @@ async def update_account(db: Session, account_id: str, account_update: AccountUp
             account.full_name = account_update.full_name
         if account_update.date_of_birth is not None:
             account.date_of_birth = account_update.date_of_birth
+        if account_update.bio is not None:
+            account.bio = account_update.bio
+        if account_update.avatar is not None:
+            account.avatar = account_update.avatar
+        if account_update.background_url is not None:
+            account.background_url = account_update.background_url
 
         account.updated_at = datetime.now()
 

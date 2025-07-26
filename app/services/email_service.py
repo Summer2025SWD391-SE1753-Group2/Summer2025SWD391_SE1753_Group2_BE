@@ -24,59 +24,66 @@ conf = ConnectionConfig(
 )
 
 async def send_confirmation_email(email: str, username: str):
-    # Create confirmation token
-    token_data = {
-        "sub": username,
-        "exp": datetime.now(timezone.utc) + timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
-    }
-    token = jwt.encode(token_data, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    """
+    Send confirmation email to newly registered user.
+    Raises exception if email sending fails.
+    """
+    # Validate inputs before processing
+    if not email or not email.strip():
+        raise ValueError("Email address is required and cannot be empty")
     
-    # Create confirmation link - BE xác thực, FE sẽ nhận redirect về login
-    confirmation_link = f"{settings.BACKEND_URL}{settings.API_V1_STR}/accounts/confirm-email?token={token}"
+    if not username or not username.strip():
+        raise ValueError("Username is required and cannot be empty")
     
-    # Load and render template
-    template = env.get_template('email_confirmation.html')
-    html_content = template.render(
-        project_name=settings.PROJECT_NAME,
-        name=username,
-        verification_link=confirmation_link,
-        expire_hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS
-    )
+    # Basic email format validation
+    if "@" not in email or "." not in email:
+        raise ValueError("Invalid email format")
     
-    # Create email message
-    message = MessageSchema(
-        subject=f"Welcome to {settings.PROJECT_NAME} - Confirm Your Email",
-        recipients=[email],
-        body=html_content,
-        subtype="html"
-    )
-    
-    # Send email
-    fm = FastMail(conf)
-    await fm.send_message(message)
-
-async def send_reset_password_email(email: str, username: str, reset_token: str):
-    # Create reset password link
-    reset_link = f"{settings.BACKEND_URL}{settings.API_V1_STR}/accounts/reset-password?token={reset_token}"
-
-    # Load and render template
-    template = env.get_template('reset_password.html')
-    html_content = template.render(
-        project_name=settings.PROJECT_NAME,
-        username=username,
-        reset_link=reset_link,
-        expire_hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS
-    )
-    # Create email message
-    message = MessageSchema(
-        subject=f"{settings.PROJECT_NAME} - Reset Your Password",
-        recipients=[email],
-        body=html_content,
-        subtype="html"
-    )
-    # Send email
-    fm = FastMail(conf)
-    await fm.send_message(message)
+    try:
+        # Create confirmation token
+        token_data = {
+            "sub": username,
+            "exp": datetime.now(timezone.utc) + timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
+        }
+        token = jwt.encode(token_data, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+        
+        # Create confirmation link - BE xác thực, FE sẽ nhận redirect về login
+        confirmation_link = f"{settings.BACKEND_URL}{settings.API_V1_STR}/accounts/confirm-email?token={token}"
+        
+        # Validate template exists before rendering
+        try:
+            template = env.get_template('email_confirmation.html')
+        except Exception as template_error:
+            raise Exception(f"Email template not found: {str(template_error)}")
+        
+        # Render template
+        html_content = template.render(
+            project_name=settings.PROJECT_NAME,
+            name=username,
+            verification_link=confirmation_link,
+            expire_hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS
+        )
+        
+        # Create email message
+        message = MessageSchema(
+            subject=f"Welcome to {settings.PROJECT_NAME} - Confirm Your Email",
+            recipients=[email],
+            body=html_content,
+            subtype="html"
+        )
+        
+        # Send email
+        fm = FastMail(conf)
+        await fm.send_message(message)
+        
+        print(f"Confirmation email sent successfully to {email} for user {username}")
+        
+    except ValueError:
+        # Re-raise validation errors
+        raise
+    except Exception as e:
+        print(f"Failed to send confirmation email to {email} for user {username}: {str(e)}")
+        raise Exception(f"Email sending failed: {str(e)}")
 
 async def send_email_verification(email: str, username: str, new_email: str):
     token_data = {
