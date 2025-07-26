@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.schemas.account import AccountOut, AccountUpdate, AccountCreate, RoleNameEnum, PasswordUpdateRequest, UsernameUpdateRequest
-from app.services.account_service import search_accounts_by_name, confirm_email, update_account_profile, send_confirmation_email, get_account_profile, update_password, update_username, is_google_user
+from app.services.account_service import search_accounts_by_name, confirm_email, update_account_profile, update_account, delete_account, send_confirmation_email, get_account_profile, get_account, update_password, update_username, is_google_user
 from app.core.deps import get_db, get_current_active_account
 from app.db.models.account import Account, AccountStatusEnum
 from app.services import account_service
@@ -344,16 +344,16 @@ def check_google_user(
     }
 
 @router.put("/me", response_model=AccountOut)
-def update_account_me(
+async def update_account_me(
     account_update: AccountUpdate,
     db: Session = Depends(get_db),
     current_account: Account = Depends(check_roles([RoleNameEnum.user, RoleNameEnum.moderator, RoleNameEnum.admin]))
 ):
     """Update current account information"""
-    return account_service.update_account(
+    return await account_service.update_account_profile(
         db=db,
-        account_id=current_account.account_id,
-        account_update=account_update
+        account=current_account,
+        profile_update=account_update
     )
 
 @router.get("/all", response_model=List[AccountOut])
@@ -439,14 +439,14 @@ def ban_account(
     return db_account
 
 @router.put("/{account_id}", response_model=AccountOut)
-def update_account(
+async def update_account(
     account_id: str,
     account_update: AccountUpdate,
     db: Session = Depends(get_db),
     current_account: Account = Depends(check_roles([RoleNameEnum.admin]))
 ):
     """Update account information - Only admin can update other accounts"""
-    return account_service.update_account(
+    return await account_service.update_account(
         db=db,
         account_id=account_id,
         account_update=account_update

@@ -213,6 +213,12 @@ async def update_account_profile(db: Session, account: Account, profile_update: 
             account.full_name = profile_update.full_name
         if profile_update.date_of_birth is not None:
             account.date_of_birth = profile_update.date_of_birth
+        if profile_update.bio is not None:
+            account.bio = profile_update.bio
+        if profile_update.avatar is not None:
+            account.avatar = profile_update.avatar
+        if profile_update.background_url is not None:
+            account.background_url = profile_update.background_url
 
         account.updated_at = datetime.now() # Update the updated_at timestamp
 
@@ -223,6 +229,19 @@ async def update_account_profile(db: Session, account: Account, profile_update: 
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+
+
+def delete_account(db: Session, account_id: str) -> None:
+    """
+    Delete an account by ID (admin function).
+    Raises HTTPException if not found.
+    """
+    account = get_account(db, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    
+    db.delete(account)
+    db.commit()
 
 
 def update_password(db: Session, account: Account, new_password: str, current_password: Optional[str] = None) -> Account:
@@ -337,3 +356,62 @@ def ban_account(db: Session, account_id: str) -> Account:
     db.commit()
     db.refresh(account)
     return account
+
+
+async def update_account(db: Session, account_id: str, account_update: AccountUpdate) -> Account:
+    """
+    Updates an account by ID (admin function).
+    Handles email and phone number updates, including sending verification emails
+    and setting verification status to False if changed.
+    """
+    try:
+        account = get_account(db, account_id)
+        
+        # If email is being updated, send verification email
+        if account_update.email and account_update.email != account.email:
+            # Check if new email is already in use
+            existing_email = db.query(Account).filter(
+                Account.email == account_update.email,
+                Account.account_id != account.account_id
+            ).first()
+            if existing_email:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Email already in use"
+                )
+            # Send verification email
+            await send_email_verification(account.email, account.username, account_update.email)
+            # Set email_verified to False until verified
+            account.email_verified = False
+            account.email = account_update.email
+
+        # If phone number is being updated, set phone_verified to False
+        if account_update.phone and account_update.phone != account.phone_number:
+            # Check if new phone number is already in use
+            existing_phone = db.query(Account).filter(
+                Account.phone_number == account_update.phone,
+                Account.account_id != account.account_id
+            ).first()
+            if existing_phone:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Phone number already in use"
+                )
+            account.phone_number = account_update.phone
+            account.phone_verified = False
+
+        # Update other fields
+        if account_update.full_name is not None:
+            account.full_name = account_update.full_name
+        if account_update.date_of_birth is not None:
+            account.date_of_birth = account_update.date_of_birth
+
+        account.updated_at = datetime.now()
+
+        db.commit()
+        db.refresh(account)
+        return account
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
