@@ -251,19 +251,65 @@ async def resend_confirmation_email(username: str, db: Session = Depends(get_db_
     Resend confirmation email
     PUBLIC ENDPOINT - No authentication required
     """
-    account = db.query(Account).filter(Account.username == username).first()
-    if not account:
+    try:
+        account = db.query(Account).filter(Account.username == username).first()
+        if not account:
+            raise HTTPException(
+                status_code=404,
+                detail="Account not found"
+            )
+        if account.email_verified:
+            raise HTTPException(
+                status_code=400,
+                detail="Email already verified"
+            )
+        
+        # Try to send confirmation email
+        try:
+            await send_confirmation_email(account.email, account.username)
+            return {"message": "Confirmation email sent successfully"}
+        except Exception as email_error:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to send confirmation email: {str(email_error)}"
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
         raise HTTPException(
-            status_code=404,
-            detail="Account not found"
+            status_code=500,
+            detail=f"Unexpected error: {str(e)}"
         )
-    if account.email_verified:
+
+@router.get("/registration-status/{username}")
+async def check_registration_status(username: str, db: Session = Depends(get_db_simple)):
+    """
+    Check registration status of an account
+    PUBLIC ENDPOINT - No authentication required
+    """
+    try:
+        account = db.query(Account).filter(Account.username == username).first()
+        if not account:
+            return {
+                "exists": False,
+                "message": "Account not found"
+            }
+        
+        return {
+            "exists": True,
+            "username": account.username,
+            "email": account.email,
+            "status": account.status.value,
+            "email_verified": account.email_verified,
+            "phone_verified": account.phone_verified,
+            "created_at": account.created_at,
+            "updated_at": account.updated_at
+        }
+    except Exception as e:
         raise HTTPException(
-            status_code=400,
-            detail="Email already verified"
+            status_code=500,
+            detail=f"Error checking registration status: {str(e)}"
         )
-    await send_confirmation_email(account.email, account.username)
-    return {"message": "Confirmation email sent"}
 
 @router.post("/", response_model=AccountOut)
 async def create_account(

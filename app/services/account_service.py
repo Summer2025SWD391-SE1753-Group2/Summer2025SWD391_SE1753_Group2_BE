@@ -78,9 +78,6 @@ async def create_account(db: Session, account: AccountCreate) -> Account:
     Performs unique field checks, hashes the password, sets initial status,
     and sends a confirmation email.
     """
-    # Start a transaction explicitly
-    db.begin()
-    
     try:
         # Check unique constraints before creating
         check_unique_fields(db, username=account.username, email=account.email)
@@ -115,6 +112,7 @@ async def create_account(db: Session, account: AccountCreate) -> Account:
         
         # Validate all required fields before attempting to send email
         if not db_account.email or not db_account.username:
+            db.rollback()
             raise ValueError("Missing required fields: email and username are required")
         
         # Try to send confirmation email BEFORE committing

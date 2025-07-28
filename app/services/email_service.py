@@ -85,6 +85,60 @@ async def send_confirmation_email(email: str, username: str):
         print(f"Failed to send confirmation email to {email} for user {username}: {str(e)}")
         raise Exception(f"Email sending failed: {str(e)}")
 
+async def send_reset_password_email(email: str, username: str, reset_token: str):
+    """
+    Send reset password email to user.
+    Raises exception if email sending fails.
+    """
+    # Validate inputs before processing
+    if not email or not email.strip():
+        raise ValueError("Email address is required and cannot be empty")
+    
+    if not username or not username.strip():
+        raise ValueError("Username is required and cannot be empty")
+    
+    if not reset_token or not reset_token.strip():
+        raise ValueError("Reset token is required and cannot be empty")
+    
+    try:
+        # Create reset password link
+        reset_link = f"{settings.BACKEND_URL}{settings.API_V1_STR}/accounts/reset-password?token={reset_token}"
+
+        # Validate template exists before rendering
+        try:
+            template = env.get_template('reset_password.html')
+        except Exception as template_error:
+            raise Exception(f"Email template not found: {str(template_error)}")
+        
+        # Render template
+        html_content = template.render(
+            project_name=settings.PROJECT_NAME,
+            username=username,
+            reset_link=reset_link,
+            expire_hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS
+        )
+        
+        # Create email message
+        message = MessageSchema(
+            subject=f"{settings.PROJECT_NAME} - Reset Your Password",
+            recipients=[email],
+            body=html_content,
+            subtype="html"
+        )
+        
+        # Send email
+        fm = FastMail(conf)
+        await fm.send_message(message)
+        
+        print(f"Reset password email sent successfully to {email} for user {username}")
+        
+    except ValueError:
+        # Re-raise validation errors
+        raise
+    except Exception as e:
+        print(f"Failed to send reset password email to {email} for user {username}: {str(e)}")
+        raise Exception(f"Email sending failed: {str(e)}")
+
 async def send_email_verification(email: str, username: str, new_email: str):
     token_data = {
         "sub": username,
